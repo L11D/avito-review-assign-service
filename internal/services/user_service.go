@@ -12,6 +12,7 @@ import (
 
 type UserRepo interface {
 	Save(ctx context.Context, user domain.User) (domain.User, error)
+	GetByTeamID(ctx context.Context, teamId uuid.UUID) ([]domain.User, error)
 }
 
 type userService struct {
@@ -38,6 +39,20 @@ func (s *userService) CreateUsersInTeam(ctx context.Context, teamId uuid.UUID, m
 	}
 
 	return createdMembers, nil
+}
+
+func (s *userService) GetTeamMembers(ctx context.Context, teamId uuid.UUID) ([]dto.TeamMemberDTO, error) {
+	users, err := s.repo.GetByTeamID(ctx, teamId)
+	if err != nil {
+		return nil, err
+	}
+
+	memberDTOs := make([]dto.TeamMemberDTO, len(users))
+	for i, user := range users {
+		memberDTOs[i] = userToMemberDTO(user)
+	}
+
+	return memberDTOs, nil
 }
 
 func memberDTOtoUser(dto dto.TeamMemberDTO, teamId uuid.UUID) domain.User {

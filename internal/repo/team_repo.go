@@ -44,3 +44,23 @@ func (r *teamRepo) Save(ctx context.Context, team domain.Team) (domain.Team, err
 
 	return createdTeam, nil
 }
+
+func (r *teamRepo) GetByName(ctx context.Context, name string) (domain.Team, error) {
+	query := r.qb.
+		Select("id", "name").
+		From("teams").
+		Where(sq.Eq{"name": name})
+
+	sql, args, err := query.ToSql()
+	if err != nil {
+		return domain.Team{}, err
+	}
+
+	var team domain.Team
+	err = r.getter.DefaultTrOrDB(ctx, r.db).GetContext(ctx, &team, sql, args...)
+	if err != nil {
+		return domain.Team{}, err
+	}
+
+	return team, nil
+}

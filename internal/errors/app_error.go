@@ -3,7 +3,7 @@ package errors
 type ErrorCode string
 
 const (
-	TEAM_EXISTS        ErrorCode = "TEAM_EXISTS"
+	TEAM_EXISTS       ErrorCode = "TEAM_EXISTS"
 	USER_EXISTS       ErrorCode = "USER_EXISTS"
 	PR_EXISTS         ErrorCode = "PR_EXISTS"
 	PR_MERGED         ErrorCode = "PR_MERGED"
@@ -11,6 +11,7 @@ const (
 	NO_CANDIDATE      ErrorCode = "NO_CANDIDATE"
 	NOT_FOUND         ErrorCode = "NOT_FOUND"
 	VALIDATION_FAILED ErrorCode = "VALIDATION_FAILED"
+	QUERY_PARAM_MISSING ErrorCode = "QUERY_PARAM_MISSING"
 )
 
 type AppError struct {
@@ -51,6 +52,22 @@ func NewUserExistsError(userName string) *AppError {
 	return &AppError{
 		Code:       USER_EXISTS,
 		Message:    "User '" + userName + "' already exists",
+		StatusCode: 400,
+	}
+}
+
+func NewNotFoundError(entity string) *AppError {
+	return &AppError{
+		Code:       NOT_FOUND,
+		Message:    entity + " not found",
+		StatusCode: 404,
+	}
+}
+
+func NewQueryParamMissingError(param string) *AppError {
+	return &AppError{
+		Code:       QUERY_PARAM_MISSING,
+		Message:    "Query parameter '" + param + "' is missing",
 		StatusCode: 400,
 	}
 }

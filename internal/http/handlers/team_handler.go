@@ -11,6 +11,7 @@ import (
 
 type TeamService interface {
 	Create(ctx context.Context, team dto.TeamDTO) (dto.TeamDTO, error)
+	GetByName(ctx context.Context, name string) (dto.TeamDTO, error)
 }
 
 type TeamHandler struct{
@@ -46,6 +47,15 @@ func (h *TeamHandler) Add(c *gin.Context) {
 }
 
 func (h *TeamHandler) Get(c *gin.Context) {
-	id := c.Param("id")
-	c.JSON(http.StatusOK, gin.H{"status": "team retrieved", "id": id})
+	name := c.Query("name")
+	if name == "" {
+		c.Error(errors.NewQueryParamMissingError("name"))
+		return
+	}
+	team, err := h.service.GetByName(c.Request.Context(), name)
+	if err != nil {
+		c.Error(err)
+		return
+	}
+	c.JSON(http.StatusOK, team)
 }

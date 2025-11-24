@@ -1,6 +1,7 @@
 package errors
 
 import (
+	"database/sql"
 	"errors"
 	"log/slog"
 
@@ -9,6 +10,7 @@ import (
 
 var (
     ErrAlreadyExists = errors.New("already exists")
+    ErrNotFound      = errors.New("not found")
 )
 
 func MapPgError(err error) error {
@@ -19,7 +21,7 @@ func MapPgError(err error) error {
     if e, ok := pgErr(err); ok {
         switch e.Code {
         case "23505": // unique_violation
-            return ErrAlreadyExists               
+            return ErrAlreadyExists
 		default:
 			slog.Warn("Unhandled PostgreSQL error", 
 				slog.String("code", string(e.Code)), 
@@ -28,6 +30,10 @@ func MapPgError(err error) error {
 			return err
         }
 		
+    }
+
+    if errors.Is(err, sql.ErrNoRows) {
+        return ErrNotFound
     }
 
     return err
