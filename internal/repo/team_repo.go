@@ -5,9 +5,9 @@ import (
 
 	"github.com/L11D/avito-review-assign-service/internal/domain"
 	sq "github.com/Masterminds/squirrel"
-	"github.com/jmoiron/sqlx"
 	trmsqlx "github.com/avito-tech/go-transaction-manager/drivers/sqlx/v2"
-
+	"github.com/google/uuid"
+	"github.com/jmoiron/sqlx"
 )
 
 type teamRepo struct {
@@ -50,6 +50,26 @@ func (r *teamRepo) GetByName(ctx context.Context, name string) (domain.Team, err
 		Select("id", "name").
 		From("teams").
 		Where(sq.Eq{"name": name})
+
+	sql, args, err := query.ToSql()
+	if err != nil {
+		return domain.Team{}, err
+	}
+
+	var team domain.Team
+	err = r.getter.DefaultTrOrDB(ctx, r.db).GetContext(ctx, &team, sql, args...)
+	if err != nil {
+		return domain.Team{}, err
+	}
+
+	return team, nil
+}
+
+func (r *teamRepo) GetByID(ctx context.Context, id uuid.UUID) (domain.Team, error) {
+	query := r.qb.
+		Select("id", "name").
+		From("teams").
+		Where(sq.Eq{"id": id})
 
 	sql, args, err := query.ToSql()
 	if err != nil {

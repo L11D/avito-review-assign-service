@@ -30,13 +30,15 @@ func Run() {
 	r.Use(middleware.ErrorHandler())
 	
 	userRepo := repo.NewUserRepo(db, trmsqlx.DefaultCtxGetter)
-	userService := services.NewUserService(userRepo)
-
 	teamRepo := repo.NewTeamRepo(db, trmsqlx.DefaultCtxGetter)
+
+	userService := services.NewUserService(userRepo, teamRepo)
 	teamService := services.NewTeamService(teamRepo, userService, trManager)
+
 	teamHandler := handlers.NewTeamHandler(teamService)
+	userHandler := handlers.NewUserHandler(userService)
 
-
+	userHandler.RegisterRoutes(r)
 	teamHandler.RegisterRoutes(r)
 
 	r.Run(":8080")

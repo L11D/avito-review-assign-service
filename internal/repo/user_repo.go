@@ -64,3 +64,24 @@ func (r *userRepo) GetByTeamID(ctx context.Context, teamId uuid.UUID) ([]domain.
 
 	return users, nil
 }
+
+func (r *userRepo) SetIsActive(ctx context.Context, userId string, isActive bool) (domain.User, error) {
+	query := r.qb.
+		Update("users").
+		Set("is_active", isActive).
+		Where(sq.Eq{"id": userId}).
+		Suffix("RETURNING id, username, is_active, team_id")
+	
+	sql, args, err := query.ToSql()
+	if err != nil {
+		return domain.User{}, err
+	}
+
+	var updatedUser domain.User
+	err = r.getter.DefaultTrOrDB(ctx, r.db).GetContext(ctx, &updatedUser, sql, args...)
+	if err != nil {
+		return domain.User{}, err
+	}
+
+	return updatedUser, nil
+}

@@ -3,14 +3,14 @@ package errors
 type ErrorCode string
 
 const (
-	TEAM_EXISTS       ErrorCode = "TEAM_EXISTS"
-	USER_EXISTS       ErrorCode = "USER_EXISTS"
-	PR_EXISTS         ErrorCode = "PR_EXISTS"
-	PR_MERGED         ErrorCode = "PR_MERGED"
-	NOT_ASSIGNED      ErrorCode = "NOT_ASSIGNED"
-	NO_CANDIDATE      ErrorCode = "NO_CANDIDATE"
-	NOT_FOUND         ErrorCode = "NOT_FOUND"
-	VALIDATION_FAILED ErrorCode = "VALIDATION_FAILED"
+	TEAM_EXISTS         ErrorCode = "TEAM_EXISTS"
+	USER_EXISTS         ErrorCode = "USER_EXISTS"
+	PR_EXISTS           ErrorCode = "PR_EXISTS"
+	PR_MERGED           ErrorCode = "PR_MERGED"
+	NOT_ASSIGNED        ErrorCode = "NOT_ASSIGNED"
+	NO_CANDIDATE        ErrorCode = "NO_CANDIDATE"
+	NOT_FOUND           ErrorCode = "NOT_FOUND"
+	VALIDATION_FAILED   ErrorCode = "VALIDATION_FAILED"
 	QUERY_PARAM_MISSING ErrorCode = "QUERY_PARAM_MISSING"
 )
 
