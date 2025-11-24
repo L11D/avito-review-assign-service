@@ -5,12 +5,17 @@ go 1.24.4
 require github.com/gin-gonic/gin v1.11.0
 
 require (
+	github.com/avito-tech/go-transaction-manager/drivers/sql/v2 v2.0.1 // indirect
+	github.com/avito-tech/go-transaction-manager/trm/v2 v2.0.2 // indirect
 	github.com/lann/builder v0.0.0-20180802200727-47ae307949d0 // indirect
 	github.com/lann/ps v0.0.0-20150810152359-62de8c46ede0 // indirect
+	go.uber.org/atomic v1.7.0 // indirect
+	go.uber.org/multierr v1.9.0 // indirect
 )
 
 require (
 	github.com/Masterminds/squirrel v1.5.4
+	github.com/avito-tech/go-transaction-manager/drivers/sqlx/v2 v2.0.2
 	github.com/bytedance/sonic v1.14.0 // indirect
 	github.com/bytedance/sonic/loader v0.3.0 // indirect
 	github.com/cloudwego/base64x v0.1.6 // indirect

@@ -6,7 +6,7 @@ type TeamDTO struct {
 }
 
 type TeamMemberDTO struct {
-	UserID   string `json:"user_id" binding:"required"`
+	Id       string `json:"user_id" binding:"required"`
 	Username string `json:"username" binding:"required"`
 	IsActive bool   `json:"is_active" binding:"required"`
 }

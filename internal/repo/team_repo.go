@@ -1,27 +1,30 @@
 package repo
 
 import (
+	"context"
+
 	"github.com/L11D/avito-review-assign-service/internal/domain"
-	"github.com/L11D/avito-review-assign-service/internal/services"
 	sq "github.com/Masterminds/squirrel"
 	"github.com/jmoiron/sqlx"
+	trmsqlx "github.com/avito-tech/go-transaction-manager/drivers/sqlx/v2"
+
 )
 
 type teamRepo struct {
 	db *sqlx.DB
 	qb sq.StatementBuilderType
+	getter *trmsqlx.CtxGetter
 }
 
-func NewTeamRepo(db *sqlx.DB) services.TeamRepo {
+func NewTeamRepo(db *sqlx.DB, getter *trmsqlx.CtxGetter) *teamRepo {
 	return &teamRepo{
 		db: db,
 		qb: sq.StatementBuilder.PlaceholderFormat(sq.Dollar),
+		getter: getter,
 	}
 }
 
-// валидация
-
-func (r *teamRepo) Save(team domain.Team) (domain.Team, error) {
+func (r *teamRepo) Save(ctx context.Context, team domain.Team) (domain.Team, error) {
 	query := r.qb.
 		Insert("teams").
 		Columns("name").
@@ -34,7 +37,8 @@ func (r *teamRepo) Save(team domain.Team) (domain.Team, error) {
 	}
 
 	var createdTeam domain.Team
-	err = r.db.Get(&createdTeam, sql, args...)
+	// err = r.db.GetContext(ctx, &createdTeam, sql, args...)
+	err = r.getter.DefaultTrOrDB(ctx, r.db).GetContext(ctx, &createdTeam, sql, args...)
 	if err != nil {
 		return domain.Team{}, err
 	}

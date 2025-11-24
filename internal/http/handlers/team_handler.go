@@ -1,13 +1,15 @@
 package handlers
 
 import (
+	"context"
 	"net/http"
-	"github.com/gin-gonic/gin"
+
 	"github.com/L11D/avito-review-assign-service/internal/http/dto"
+	"github.com/gin-gonic/gin"
 )
 
 type TeamService interface {
-	Create(team dto.TeamDTO) (dto.TeamDTO, error)
+	Create(ctx context.Context, team dto.TeamDTO) (dto.TeamDTO, error)
 }
 
 type TeamHandler struct{
@@ -33,7 +35,7 @@ func (h *TeamHandler) Add(c *gin.Context) {
 		return
 	}
 
-	createdTeam, err := h.service.Create(dto)
+	createdTeam, err := h.service.Create(c.Request.Context(), dto)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
