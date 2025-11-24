@@ -37,7 +37,6 @@ func (r *teamRepo) Save(ctx context.Context, team domain.Team) (domain.Team, err
 	}
 
 	var createdTeam domain.Team
-	// err = r.db.GetContext(ctx, &createdTeam, sql, args...)
 	err = r.getter.DefaultTrOrDB(ctx, r.db).GetContext(ctx, &createdTeam, sql, args...)
 	if err != nil {
 		return domain.Team{}, err

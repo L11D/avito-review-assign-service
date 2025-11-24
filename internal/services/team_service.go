@@ -2,11 +2,13 @@ package services
 
 import (
 	"context"
+	"errors"
 
 	"github.com/L11D/avito-review-assign-service/internal/domain"
+	appErrors "github.com/L11D/avito-review-assign-service/internal/errors"
 	"github.com/L11D/avito-review-assign-service/internal/http/dto"
-	"github.com/google/uuid"
 	"github.com/avito-tech/go-transaction-manager/trm/v2/manager"
+	"github.com/google/uuid"
 )
 
 type TeamRepo interface {
@@ -40,6 +42,9 @@ func (s *teamService) Create(ctx context.Context, team dto.TeamDTO) (dto.TeamDTO
 	err := s.trManager.Do(ctx, func(ctx context.Context) error {
 		createdTeam, err := s.repo.Save(ctx, domainTeam)
 		if err != nil {
+			if errors.Is(appErrors.MapPgError(err), appErrors.ErrAlreadyExists) {
+				return appErrors.NewTeamExistsError(team.Name)
+			}
 			return err
 		}
 
@@ -58,3 +63,4 @@ func (s *teamService) Create(ctx context.Context, team dto.TeamDTO) (dto.TeamDTO
 	
 	return createdTeamDTO, err
 }
+

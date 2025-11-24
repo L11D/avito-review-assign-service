@@ -2,14 +2,16 @@ package services
 
 import (
 	"context"
+	"errors"
 
+	appErrors "github.com/L11D/avito-review-assign-service/internal/errors"
 	"github.com/L11D/avito-review-assign-service/internal/domain"
 	"github.com/L11D/avito-review-assign-service/internal/http/dto"
 	"github.com/google/uuid"
 )
 
 type UserRepo interface {
-	SaveMany(ctx context.Context, users []domain.User) ([]domain.User, error)
+	Save(ctx context.Context, user domain.User) (domain.User, error)
 }
 
 type userService struct {
@@ -21,19 +23,18 @@ func NewUserService(repo UserRepo) *userService {
 }
 
 func (s *userService) CreateUsersInTeam(ctx context.Context, teamId uuid.UUID, members []dto.TeamMemberDTO) ([]dto.TeamMemberDTO, error) {
-	users := make([]domain.User, len(members))
+	createdMembers := make([]dto.TeamMemberDTO, len(members))
+	
 	for i, member := range members {
-		users[i] = memberDTOtoUser(member, teamId)
-	}
-
-	createdUsers, err := s.repo.SaveMany(ctx, users)
-	if err != nil {
-		return nil, err
-	}
-
-	createdMembers := make([]dto.TeamMemberDTO, len(createdUsers))
-	for i, user := range createdUsers {
-		createdMembers[i] = userToMemberDTO(user)
+		user := memberDTOtoUser(member, teamId)
+		createdUser, err := s.repo.Save(ctx, user)
+		if err != nil {
+			if errors.Is(appErrors.MapPgError(err), appErrors.ErrAlreadyExists) {
+				return nil, appErrors.NewUserExistsError(member.Id)
+			}
+			return nil, err
+		}
+		createdMembers[i] = userToMemberDTO(createdUser)
 	}
 
 	return createdMembers, nil

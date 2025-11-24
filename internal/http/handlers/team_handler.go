@@ -4,6 +4,7 @@ import (
 	"context"
 	"net/http"
 
+	"github.com/L11D/avito-review-assign-service/internal/errors"
 	"github.com/L11D/avito-review-assign-service/internal/http/dto"
 	"github.com/gin-gonic/gin"
 )
@@ -30,18 +31,18 @@ func (h *TeamHandler) RegisterRoutes(e *gin.Engine) {
 
 func (h *TeamHandler) Add(c *gin.Context) {
 	var dto dto.TeamDTO
-	if err := c.ShouldBindJSON(&dto); err != nil { // временное решение
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+	if err := c.ShouldBindJSON(&dto); err != nil { 
+		c.Error(errors.NewValidationFailedError(err.Error()))
 		return
 	}
 
 	createdTeam, err := h.service.Create(c.Request.Context(), dto)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.Error(err)
 		return
 	}
 
-	c.JSON(http.StatusOK, createdTeam)
+	c.JSON(201, createdTeam)
 }
 
 func (h *TeamHandler) Get(c *gin.Context) {

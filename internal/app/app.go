@@ -1,30 +1,34 @@
 package app
 
 import (
+	"log/slog"
+
 	"github.com/jmoiron/sqlx"
 	_ "github.com/lib/pq"
-	
-	"github.com/gin-gonic/gin"
+
 	"github.com/L11D/avito-review-assign-service/internal/http/handlers"
-	"github.com/L11D/avito-review-assign-service/internal/services"
+	"github.com/L11D/avito-review-assign-service/internal/http/middleware"
 	"github.com/L11D/avito-review-assign-service/internal/repo"
-	"fmt"
+	"github.com/L11D/avito-review-assign-service/internal/services"
 	trmsqlx "github.com/avito-tech/go-transaction-manager/drivers/sqlx/v2"
 	"github.com/avito-tech/go-transaction-manager/trm/v2/manager"
+	"github.com/gin-gonic/gin"
 )
 
 func Run() {
 
 	db, err := sqlx.Connect("postgres", "postgres://user:pass@localhost:5432/review-assign-service-db?sslmode=disable")
     if err != nil {
-        fmt.Println("Failed to connect to the database:", err)
+		slog.Error("Failed to connect to the database", slog.String("error", err.Error()))
         return
     }
 
 	trManager := manager.Must(trmsqlx.NewDefaultFactory(db))
 	
-	r := gin.Default()
-
+	r := gin.New()
+	r.Use(gin.Recovery())
+	r.Use(middleware.ErrorHandler())
+	
 	userRepo := repo.NewUserRepo(db, trmsqlx.DefaultCtxGetter)
 	userService := services.NewUserService(userRepo)
 

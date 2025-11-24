@@ -23,27 +23,23 @@ func NewUserRepo(db *sqlx.DB, getter *trmsqlx.CtxGetter) *userRepo {
 	}
 }
 
-func (r *userRepo) SaveMany(ctx context.Context, users []domain.User) ([]domain.User, error) {
+func (r *userRepo) Save(ctx context.Context, user domain.User) (domain.User, error) {
 	query := r.qb.
 		Insert("users").
-		Columns("id", "username", "is_active", "team_id")
-
-	for _, user := range users {
-		query = query.Values(user.Id, user.Username, user.IsActive, user.TeamId)
-	}
-
-	query = query.Suffix("RETURNING id, username, team_id")
+		Columns("id", "username", "is_active", "team_id").
+		Values(user.Id, user.Username, user.IsActive, user.TeamId).
+		Suffix("RETURNING id, username, team_id")
 
 	sql, args, err := query.ToSql()
 	if err != nil {
-		return nil, err
+		return domain.User{}, err
 	}
 
-	var createdUsers []domain.User
-	err = r.getter.DefaultTrOrDB(ctx, r.db).SelectContext(ctx, &createdUsers, sql, args...)
+	var createdUser domain.User
+	err = r.getter.DefaultTrOrDB(ctx, r.db).GetContext(ctx, &createdUser, sql, args...)
 	if err != nil {
-		return nil, err
+		return domain.User{}, err
 	}
 
-	return createdUsers, nil
+	return createdUser, nil
 }
