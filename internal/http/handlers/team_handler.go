@@ -6,10 +6,18 @@ import (
 	"github.com/L11D/avito-review-assign-service/internal/http/dto"
 )
 
-type TeamHandler struct{}
+type TeamService interface {
+	Create(team dto.TeamDTO) (dto.TeamDTO, error)
+}
 
-func NewTeamHandler() *TeamHandler {
-	return &TeamHandler{}
+type TeamHandler struct{
+	service TeamService
+}
+
+func NewTeamHandler(service TeamService) *TeamHandler {
+	return &TeamHandler{
+		service: service,
+	}
 }
 
 func (h *TeamHandler) RegisterRoutes(e *gin.Engine) {
@@ -24,7 +32,14 @@ func (h *TeamHandler) Add(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{"status": "team added"})
+
+	createdTeam, err := h.service.Create(dto)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, createdTeam)
 }
 
 func (h *TeamHandler) Get(c *gin.Context) {
