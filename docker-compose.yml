@@ -1,0 +1,38 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: pass
+      POSTGRES_DB: review-assign-service-db
+    expose:
+      - "5432"
+    volumes:
+      - review_assign_service_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "sh -c 'pg_isready -U user -d review-assign-service-db'"]
+      interval: 5s
+      timeout: 10s
+      retries: 5
+      start_period: 10s
+    networks:
+      - internal
+
+  avito-review-assign-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    env_file: .env.example
+    ports:
+      - "8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - internal
+
+networks:
+  internal:
+
+volumes:
+  review_assign_service_data:

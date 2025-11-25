@@ -1,0 +1,37 @@
+version: "2"
+
+run:
+  timeout: 5m
+  tests: false
+
+linters:
+  default: all
+  disable:
+    - depguard
+    - varnamelen
+    - tagliatelle
+    - noinlineerr
+    - wrapcheck
+    - err113
+    - exhaustruct
+
+  exclusions:
+    paths:
+      - "e2e_tests/.*"
+
+  settings:
+    revive:
+      rules:
+        - name: exported
+          disabled: true
+    errcheck:
+      exclude-functions:
+      - (*github.com/gin-gonic/gin.Context).Error
+    mnd:
+      ignored-files: 
+        - internal/errors
+        - internal/http/handlers
+  
+
+      
+
