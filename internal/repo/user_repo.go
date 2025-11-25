@@ -29,7 +29,7 @@ func (r *userRepo) Save(ctx context.Context, user domain.User) (domain.User, err
 		Insert("users").
 		Columns("id", "username", "is_active", "team_id").
 		Values(user.Id, user.Username, user.IsActive, user.TeamId).
-		Suffix("RETURNING id, username, team_id")
+		Suffix("RETURNING id, username, team_id, is_active, assign_rate")
 
 	sql, args, err := query.ToSql()
 	if err != nil {
@@ -47,7 +47,7 @@ func (r *userRepo) Save(ctx context.Context, user domain.User) (domain.User, err
 
 func (r *userRepo) GetByTeamID(ctx context.Context, teamId uuid.UUID) ([]domain.User, error) {
 	query := r.qb.
-		Select("id", "username", "is_active", "team_id").
+		Select("id", "username", "is_active", "team_id", "assign_rate").
 		From("users").
 		Where(sq.Eq{"team_id": teamId})
 
@@ -70,7 +70,7 @@ func (r *userRepo) SetIsActive(ctx context.Context, userId string, isActive bool
 		Update("users").
 		Set("is_active", isActive).
 		Where(sq.Eq{"id": userId}).
-		Suffix("RETURNING id, username, is_active, team_id")
+		Suffix("RETURNING id, username, is_active, team_id, assign_rate")
 	
 	sql, args, err := query.ToSql()
 	if err != nil {
@@ -84,4 +84,24 @@ func (r *userRepo) SetIsActive(ctx context.Context, userId string, isActive bool
 	}
 
 	return updatedUser, nil
+}
+
+func (r *userRepo) GetByID(ctx context.Context, userId string) (domain.User, error) {
+	query := r.qb.
+		Select("id", "username", "is_active", "team_id", "assign_rate").
+		From("users").
+		Where(sq.Eq{"id": userId})
+
+	sql, args, err := query.ToSql()
+	if err != nil {
+		return domain.User{}, err
+	}
+
+	var user domain.User
+	err = r.getter.DefaultTrOrDB(ctx, r.db).GetContext(ctx, &user, sql, args...)
+	if err != nil {
+		return domain.User{}, err
+	}
+
+	return user, nil
 }

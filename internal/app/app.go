@@ -49,12 +49,15 @@ func Run() {
 
 	userRepo := repo.NewUserRepo(db, trmsqlx.DefaultCtxGetter)
 	teamRepo := repo.NewTeamRepo(db, trmsqlx.DefaultCtxGetter)
+	pullRequestRepo := repo.NewPullRequestRepo(db, trmsqlx.DefaultCtxGetter)
+	pullRequestReviewerRepo := repo.NewPullRequestReviewerRepo(db, trmsqlx.DefaultCtxGetter)
 
 	userService := services.NewUserService(userRepo, teamRepo, trManager)
 	teamService := services.NewTeamService(teamRepo, userService, trManager)
-
+	pullRequestService := services.NewPullRequestService(pullRequestRepo, pullRequestReviewerRepo, userRepo,  trManager)
 	teamHandler := handlers.NewTeamHandler(teamService)
 	userHandler := handlers.NewUserHandler(userService)
+	pullRequestHandler := handlers.NewPullRequestHandler(pullRequestService)
 
 	r := gin.New()
 	r.Use(gin.Recovery())
@@ -62,6 +65,7 @@ func Run() {
 
 	userHandler.RegisterRoutes(r)
 	teamHandler.RegisterRoutes(r)
+	pullRequestHandler.RegisterRoutes(r)
 
 	server := &http.Server{
         Addr:    ":" + config.HTTPPort,

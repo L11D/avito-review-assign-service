@@ -71,3 +71,11 @@ func NewQueryParamMissingError(param string) *AppError {
 		StatusCode: 400,
 	}
 }
+
+func NewPullRequestExistsError(prId string) *AppError {
+	return &AppError{
+		Code:       PR_EXISTS,
+		Message:    "Pull Request with ID '" + prId + "' already exists",
+		StatusCode: 409,
+	}
+}

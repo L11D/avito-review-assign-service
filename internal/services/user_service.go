@@ -32,8 +32,8 @@ func NewUserService(userRepo UserRepo, teamRepo TeamRepoUserService, trManager *
 }
 
 func (s *userService) CreateUsersInTeam(ctx context.Context, teamId uuid.UUID, members []dto.TeamMemberDTO) ([]dto.TeamMemberDTO, error) {
+
 	createdMembers := make([]dto.TeamMemberDTO, len(members))
-	
 	err := s.trManager.Do(ctx, func(ctx context.Context) error {
 		for i, member := range members {
 			user := memberDTOtoUser(member, teamId)

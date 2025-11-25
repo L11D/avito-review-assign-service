@@ -6,7 +6,8 @@ import (
 
 type User struct {
 	Id       string    `db:"id"`
-	Username string    `db:"username" validate:"required,min=1,max=50"`
+	Username string    `db:"username"`
 	IsActive bool      `db:"is_active"`
 	TeamId   uuid.UUID `db:"team_id"`
+	AssignRate int     `db:"assign_rate"`
 }

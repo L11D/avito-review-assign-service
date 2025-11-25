@@ -6,5 +6,5 @@ import (
 
 type Team struct {
     Id   uuid.UUID `db:"id"`
-    Name string    `db:"name" validate:"required,min=1,max=50"`
+    Name string    `db:"name"`
 }
