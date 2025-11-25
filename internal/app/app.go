@@ -14,6 +14,7 @@ import (
 	"github.com/L11D/avito-review-assign-service/internal/config"
 	"github.com/L11D/avito-review-assign-service/internal/http/handlers"
 	"github.com/L11D/avito-review-assign-service/internal/http/middleware"
+	"github.com/L11D/avito-review-assign-service/internal/migrations"
 	"github.com/L11D/avito-review-assign-service/internal/repo"
 	"github.com/L11D/avito-review-assign-service/internal/services"
 	trmsqlx "github.com/avito-tech/go-transaction-manager/drivers/sqlx/v2"
@@ -39,6 +40,11 @@ func Run() {
 	}
 	defer db.Close()
 
+	if err := migrations.RunMigrations(db.DB); err != nil {
+		slog.Error("Failed to run migrations", slog.String("error", err.Error()))
+		return
+	}
+
 	trManager := manager.Must(trmsqlx.NewDefaultFactory(db))
 
 	userRepo := repo.NewUserRepo(db, trmsqlx.DefaultCtxGetter)
@@ -57,14 +63,13 @@ func Run() {
 	userHandler.RegisterRoutes(r)
 	teamHandler.RegisterRoutes(r)
 
-	port := config.HTTPPort
 	server := &http.Server{
-        Addr:    ":" + port,
+        Addr:    ":" + config.HTTPPort,
         Handler: r,
 	}
 
 	go func() {
-        slog.Info("Starting server on :" + port)
+        slog.Info("Starting server on :" + config.HTTPPort)
         if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
             slog.Error("Server failed to start", slog.String("error", err.Error()))
             stop() 
@@ -72,7 +77,7 @@ func Run() {
     }()
 
 	<-ctx.Done()
-	slog.Info("Shutting down server...")
+	slog.Info("Shutting down application...")
 	stop()
 
 	shutdownCtx, cancel := context.WithTimeout(context.Background(), config.ShutdownTimeout)

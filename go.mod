@@ -7,6 +7,8 @@ require github.com/gin-gonic/gin v1.11.0
 require (
 	github.com/avito-tech/go-transaction-manager/drivers/sql/v2 v2.0.1 // indirect
 	github.com/avito-tech/go-transaction-manager/trm/v2 v2.0.2 // indirect
+	github.com/hashicorp/errwrap v1.1.0 // indirect
+	github.com/hashicorp/go-multierror v1.1.1 // indirect
 	github.com/lann/builder v0.0.0-20180802200727-47ae307949d0 // indirect
 	github.com/lann/ps v0.0.0-20150810152359-62de8c46ede0 // indirect
 	go.uber.org/atomic v1.7.0 // indirect
@@ -27,6 +29,7 @@ require (
 	github.com/goccy/go-json v0.10.2 // indirect
 	github.com/goccy/go-yaml v1.18.0 // indirect
 	github.com/golang-migrate/migrate v3.5.4+incompatible // indirectgo clean -modcache
+	github.com/golang-migrate/migrate/v4 v4.19.0
 	github.com/google/uuid v1.6.0
 	github.com/jmoiron/sqlx v1.4.0
 	github.com/json-iterator/go v1.1.12 // indirect
