@@ -33,7 +33,12 @@ type userService struct {
 	trManager *manager.Manager
 }
 
-func NewUserService(userRepo UserRepo, teamRepo TeamRepoUserService, prRepo PullRequestRepoUserService, trManager *manager.Manager) *userService {
+func NewUserService(
+	userRepo UserRepo, 
+	teamRepo TeamRepoUserService, 
+	prRepo PullRequestRepoUserService, 
+	trManager *manager.Manager,
+) *userService {
 	return &userService{
 		userRepo:  userRepo,
 		teamRepo:  teamRepo,
@@ -42,21 +47,28 @@ func NewUserService(userRepo UserRepo, teamRepo TeamRepoUserService, prRepo Pull
 	}
 }
 
-func (s *userService) CreateUsersInTeam(ctx context.Context, teamId uuid.UUID, members []dto.TeamMemberDTO) ([]dto.TeamMemberDTO, error) {
-
+func (s *userService) CreateUsersInTeam(
+	ctx context.Context, 
+	teamId uuid.UUID, 
+	members []dto.TeamMemberDTO,
+) ([]dto.TeamMemberDTO, error) {
 	createdMembers := make([]dto.TeamMemberDTO, len(members))
 	err := s.trManager.Do(ctx, func(ctx context.Context) error {
 		for i, member := range members {
 			user := memberDTOtoUser(member, teamId)
+
 			createdUser, err := s.userRepo.Save(ctx, user)
 			if err != nil {
 				if errors.Is(appErrors.MapPgError(err), appErrors.ErrAlreadyExists) {
-					return appErrors.NewUserExistsError(member.Id)
+					return appErrors.NewUserExistsError(member.ID)
 				}
+
 				return err
 			}
+
 			createdMembers[i] = userToMemberDTO(createdUser)
 		}
+
 		return nil
 	})
 
@@ -78,29 +90,31 @@ func (s *userService) GetTeamMembers(ctx context.Context, teamId uuid.UUID) ([]d
 }
 
 func (s *userService) SetIsActive(ctx context.Context, userSetIsActiveDTO dto.UserSetIsActiveDTO) (dto.UserDTO, error) {
-	user, err:= s.userRepo.GetByID(ctx, userSetIsActiveDTO.UserId)
+	user, err := s.userRepo.GetByID(ctx, userSetIsActiveDTO.UserID)
 	if err != nil {
 		if errors.Is(appErrors.MapPgError(err), appErrors.ErrNotFound) {
-			return dto.UserDTO{}, appErrors.NewNotFoundError("User with ID '" + userSetIsActiveDTO.UserId + "'")
+			return dto.UserDTO{}, appErrors.NewNotFoundError("User with ID '" + userSetIsActiveDTO.UserID + "'")
 		}
+
 		return dto.UserDTO{}, err
 	}
 
 	if user.IsActive != *userSetIsActiveDTO.IsActive {
 		user.IsActive = *userSetIsActiveDTO.IsActive
+
 		user, err = s.userRepo.Update(ctx, user)
 		if err != nil {
 			return dto.UserDTO{}, err
 		}
 	}
 
-	team, err := s.teamRepo.GetByID(ctx, user.TeamId)
+	team, err := s.teamRepo.GetByID(ctx, user.TeamID)
 	if err != nil {
 		return dto.UserDTO{}, err
 	}
 
 	return dto.UserDTO{
-		Id:       user.Id,
+		ID:       user.ID,
 		Username: user.Username,
 		IsActive: user.IsActive,
 		TeamName: team.Name,
@@ -113,8 +127,10 @@ func (s *userService) GetReviews(ctx context.Context, userId string) (dto.UserPR
 		if errors.Is(appErrors.MapPgError(err), appErrors.ErrNotFound) {
 			return dto.UserPRsDTO{}, appErrors.NewNotFoundError("User with ID '" + userId + "'")
 		}
+
 		return dto.UserPRsDTO{}, err
 	}
+
 	prs, err := s.prRepo.GetByUserId(ctx, userId)
 	if err != nil {
 		return dto.UserPRsDTO{}, err
@@ -123,28 +139,29 @@ func (s *userService) GetReviews(ctx context.Context, userId string) (dto.UserPR
 	prDTOs := make([]dto.PullRequestShortDTO, len(prs))
 	for i, pr := range prs {
 		prDTOs[i] = dto.PullRequestShortDTO{
-			Id:       pr.Id,
+			ID:       pr.ID,
 			Name:     pr.Name,
 			Status:   pr.Status,
-			AuthorId: pr.AuthorId,
+			AuthorID: pr.AuthorID,
 		}
 	}
 
 	return dto.UserPRsDTO{
-		UserId:       user.Id,
+		UserID:       user.ID,
 		PullRequests: prDTOs,
 	}, nil
 }
 
 func (s *userService) IncrementAssignRate(ctx context.Context, userId string) (domain.User, error) {
-	user,  err := s.userRepo.GetByID(ctx, userId)
+	user, err := s.userRepo.GetByID(ctx, userId)
 	if err != nil {
 		if errors.Is(appErrors.MapPgError(err), appErrors.ErrNotFound) {
 			return domain.User{}, appErrors.NewNotFoundError("User with ID '" + userId + "'")
 		}
+
 		return domain.User{}, err
 	}
-	
+
 	user.AssignRate += 1
 
 	updatedUser, err := s.userRepo.Update(ctx, user)
@@ -155,19 +172,18 @@ func (s *userService) IncrementAssignRate(ctx context.Context, userId string) (d
 	return updatedUser, nil
 }
 
-
 func memberDTOtoUser(dto dto.TeamMemberDTO, teamId uuid.UUID) domain.User {
 	return domain.User{
-		Id:       dto.Id,
+		ID:       dto.ID,
 		Username: dto.Username,
 		IsActive: dto.IsActive,
-		TeamId:   teamId,
+		TeamID:   teamId,
 	}
 }
 
 func userToMemberDTO(user domain.User) dto.TeamMemberDTO {
 	return dto.TeamMemberDTO{
-		Id:       user.Id,
+		ID:       user.ID,
 		Username: user.Username,
 		IsActive: user.IsActive,
 	}

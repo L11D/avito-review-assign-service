@@ -23,11 +23,14 @@ func NewPullRequestReviewerRepo(db *sqlx.DB, getter *trmsqlx.CtxGetter) *pullReq
 	}
 }
 
-func (r *pullRequestReviewerRepo) Save(ctx context.Context, prReviewer domain.PullRequestReviewer) (domain.PullRequestReviewer, error) {
+func (r *pullRequestReviewerRepo) Save(
+	ctx context.Context, 
+	prReviewer domain.PullRequestReviewer,
+) (domain.PullRequestReviewer, error) {
 	query := r.qb.
 		Insert("pull_request_reviewers").
 		Columns("pull_request_id", "user_id").
-		Values(prReviewer.PullRequestId, prReviewer.UserId).
+		Values(prReviewer.PullRequestID, prReviewer.UserID).
 		Suffix("RETURNING pull_request_id, user_id")
 
 	sql, args, err := query.ToSql()
@@ -36,6 +39,7 @@ func (r *pullRequestReviewerRepo) Save(ctx context.Context, prReviewer domain.Pu
 	}
 
 	var createdPRReviewer domain.PullRequestReviewer
+
 	err = r.getter.DefaultTrOrDB(ctx, r.db).GetContext(ctx, &createdPRReviewer, sql, args...)
 	if err != nil {
 		return domain.PullRequestReviewer{}, err
@@ -56,6 +60,7 @@ func (r *pullRequestReviewerRepo) GetPRUsersIds(ctx context.Context, prId string
 	}
 
 	var usersIds []string
+
 	err = r.getter.DefaultTrOrDB(ctx, r.db).SelectContext(ctx, &usersIds, sql, args...)
 	if err != nil {
 		return nil, err

@@ -14,7 +14,7 @@ type TeamService interface {
 	GetByName(ctx context.Context, name string) (dto.TeamDTO, error)
 }
 
-type TeamHandler struct{
+type TeamHandler struct {
 	service TeamService
 }
 
@@ -32,14 +32,16 @@ func (h *TeamHandler) RegisterRoutes(e *gin.Engine) {
 
 func (h *TeamHandler) Add(c *gin.Context) {
 	var dto dto.TeamDTO
-	if err := c.ShouldBindJSON(&dto); err != nil { 
+	if err := c.ShouldBindJSON(&dto); err != nil {
 		c.Error(errors.NewValidationFailedError(err.Error()))
+
 		return
 	}
 
 	createdTeam, err := h.service.Create(c.Request.Context(), dto)
 	if err != nil {
 		c.Error(err)
+
 		return
 	}
 
@@ -50,12 +52,16 @@ func (h *TeamHandler) Get(c *gin.Context) {
 	name := c.Query("name")
 	if name == "" {
 		c.Error(errors.NewQueryParamMissingError("name"))
+
 		return
 	}
+
 	team, err := h.service.GetByName(c.Request.Context(), name)
 	if err != nil {
 		c.Error(err)
+
 		return
 	}
+
 	c.JSON(http.StatusOK, team)
 }

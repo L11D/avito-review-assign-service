@@ -7,33 +7,33 @@ import (
 )
 
 type PullRequestCreateDTO struct {
-	Id       string `json:"pull_request_id" binding:"required,min=1,max=50"`
-	Name     string `json:"pull_request_name" binding:"required"`
-	AuthorId string `json:"author_id" binding:"required"`
+	ID       string `binding:"required,min=1,max=50" json:"pull_request_id"`
+	Name     string `binding:"required"              json:"pull_request_name"`
+	AuthorID string `binding:"required"              json:"author_id"`
 }
 
 type PullRequestDTO struct {
-	Id        string     `json:"pull_request_id"`
-	Name      string     `json:"pull_request_name"`
-	AuthorId  string     `json:"author_id"`
-	Status    domain.PRStatus     `json:"status"`
-	CreatedAt time.Time  `json:"created_at"`
-	MergedAt  *time.Time `json:"merged_at,omitempty"`
-	Reviewers []string   `json:"assigned_reviewers"`
+	ID        string          `json:"pull_request_id"`
+	Name      string          `json:"pull_request_name"`
+	AuthorID  string          `json:"author_id"`
+	Status    domain.PRStatus `json:"status"`
+	CreatedAt time.Time       `json:"created_at"`
+	MergedAt  *time.Time      `json:"merged_at,omitempty"`
+	Reviewers []string        `json:"assigned_reviewers"`
 }
 
 type PullRequestShortDTO struct {
-	Id       string `json:"pull_request_id"`
-	Name     string `json:"pull_request_name"`
-	AuthorId string `json:"author_id"`
+	ID       string          `json:"pull_request_id"`
+	Name     string          `json:"pull_request_name"`
+	AuthorID string          `json:"author_id"`
 	Status   domain.PRStatus `json:"status"`
 }
 
 type PullRequestMergeDTO struct {
-	Id string `json:"pull_request_id" binding:"required,min=1,max=50"`
+	ID string `binding:"required,min=1,max=50" json:"pull_request_id"`
 }
 
 type PullRequestReassignDTO struct {
-	PullRequestId string `json:"pull_request_id" binding:"required,min=1,max=50"`
-	OldReviewerId string `json:"old_reviewer_id" binding:"required,min=1,max=50"`
+	PullRequestID string `binding:"required,min=1,max=50" json:"pull_request_id"`
+	OldReviewerID string `binding:"required,min=1,max=50" json:"old_reviewer_id"`
 }

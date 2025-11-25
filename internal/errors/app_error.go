@@ -20,10 +20,6 @@ type AppError struct {
 	StatusCode int
 }
 
-func (e *AppError) Error() string {
-	return string(e.Code) + " " + e.Message
-}
-
 func NewAppError(code ErrorCode, message string, statusCode int) *AppError {
 	return &AppError{
 		Code:       code,
@@ -102,4 +98,8 @@ func NewNoCandidateError() *AppError {
 		Message:    "No active replacement candidate in team",
 		StatusCode: 409,
 	}
+}
+
+func (e *AppError) Error() string {
+	return string(e.Code) + " " + e.Message
 }

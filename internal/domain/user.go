@@ -5,9 +5,9 @@ import (
 )
 
 type User struct {
-	Id       string    `db:"id"`
-	Username string    `db:"username"`
-	IsActive bool      `db:"is_active"`
-	TeamId   uuid.UUID `db:"team_id"`
-	AssignRate int     `db:"assign_rate"`
+	ID         string    `db:"id"`
+	Username   string    `db:"username"`
+	IsActive   bool      `db:"is_active"`
+	TeamID     uuid.UUID `db:"team_id"`
+	AssignRate int       `db:"assign_rate"`
 }

@@ -14,7 +14,7 @@ type PullRequestService interface {
 	Reassign(ctx context.Context, reassignDTO dto.PullRequestReassignDTO) (dto.PullRequestDTO, error)
 }
 
-type PullRequestHandler struct{
+type PullRequestHandler struct {
 	service PullRequestService
 }
 
@@ -35,12 +35,14 @@ func (h *PullRequestHandler) Create(c *gin.Context) {
 	var dto dto.PullRequestCreateDTO
 	if err := c.ShouldBindJSON(&dto); err != nil {
 		c.Error(errors.NewValidationFailedError(err.Error()))
+
 		return
 	}
 
 	createdPR, err := h.service.Create(c.Request.Context(), dto)
 	if err != nil {
 		c.Error(err)
+
 		return
 	}
 
@@ -51,12 +53,14 @@ func (h *PullRequestHandler) Merge(c *gin.Context) {
 	var dto dto.PullRequestMergeDTO
 	if err := c.ShouldBindJSON(&dto); err != nil {
 		c.Error(errors.NewValidationFailedError(err.Error()))
+
 		return
 	}
 
-	mergedPR,  err := h.service.Merge(c.Request.Context(), dto.Id)
+	mergedPR, err := h.service.Merge(c.Request.Context(), dto.ID)
 	if err != nil {
 		c.Error(err)
+
 		return
 	}
 
@@ -67,12 +71,14 @@ func (h *PullRequestHandler) Reassign(c *gin.Context) {
 	var dto dto.PullRequestReassignDTO
 	if err := c.ShouldBindJSON(&dto); err != nil {
 		c.Error(errors.NewValidationFailedError(err.Error()))
+
 		return
 	}
 
-	reassignedPR,  err := h.service.Reassign(c.Request.Context(), dto)
+	reassignedPR, err := h.service.Reassign(c.Request.Context(), dto)
 	if err != nil {
 		c.Error(err)
+
 		return
 	}
 

@@ -2,6 +2,7 @@ package migrations
 
 import (
 	"database/sql"
+	"errors"
 	"log/slog"
 
 	"github.com/golang-migrate/migrate/v4"
@@ -10,25 +11,26 @@ import (
 )
 
 func RunMigrations(db *sql.DB) error {
-    driver, err := postgres.WithInstance(db, &postgres.Config{})
-    if err != nil {
-        return err
-    }
+	driver, err := postgres.WithInstance(db, &postgres.Config{})
+	if err != nil {
+		return err
+	}
 
-    m, err := migrate.NewWithDatabaseInstance(
-        "file://./migrations",
-        "postgres", 
+	m, err := migrate.NewWithDatabaseInstance(
+		"file://./migrations",
+		"postgres",
 		driver,
 	)
-    if err != nil {
-        return err
-    }
+	if err != nil {
+		return err
+	}
 
-    err = m.Up()
-    if err != nil && err != migrate.ErrNoChange {
-        return err
-    }
+	err = m.Up()
+	if err != nil && !errors.Is(err, migrate.ErrNoChange) {
+		return err
+	}
 
 	slog.Info("Migrations applied successfully")
-    return nil
+
+	return nil
 }

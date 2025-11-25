@@ -41,16 +41,18 @@ func (s *teamService) Create(ctx context.Context, team dto.TeamDTO) (dto.TeamDTO
 	}
 
 	var createdTeamDTO dto.TeamDTO
+
 	err := s.trManager.Do(ctx, func(ctx context.Context) error {
 		createdTeam, err := s.repo.Save(ctx, domainTeam)
 		if err != nil {
 			if errors.Is(appErrors.MapPgError(err), appErrors.ErrAlreadyExists) {
 				return appErrors.NewTeamExistsError(team.Name)
 			}
+
 			return err
 		}
 
-		createdMembers, err := s.userService.CreateUsersInTeam(ctx, createdTeam.Id, team.Members)
+		createdMembers, err := s.userService.CreateUsersInTeam(ctx, createdTeam.ID, team.Members)
 		if err != nil {
 			return err
 		}
@@ -72,10 +74,11 @@ func (s *teamService) GetByName(ctx context.Context, name string) (dto.TeamDTO, 
 		if errors.Is(appErrors.MapPgError(err), appErrors.ErrNotFound) {
 			return dto.TeamDTO{}, appErrors.NewNotFoundError("Team with name '" + name + "'")
 		}
+
 		return dto.TeamDTO{}, err
 	}
 
-	members, err := s.userService.GetTeamMembers(ctx, team.Id)
+	members, err := s.userService.GetTeamMembers(ctx, team.ID)
 	if err != nil {
 		return dto.TeamDTO{}, err
 	}
@@ -85,4 +88,3 @@ func (s *teamService) GetByName(ctx context.Context, name string) (dto.TeamDTO, 
 		Members: members,
 	}, nil
 }
-

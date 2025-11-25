@@ -11,15 +11,15 @@ import (
 )
 
 type userRepo struct {
-	db *sqlx.DB
-	qb sq.StatementBuilderType
+	db     *sqlx.DB
+	qb     sq.StatementBuilderType
 	getter *trmsqlx.CtxGetter
 }
 
 func NewUserRepo(db *sqlx.DB, getter *trmsqlx.CtxGetter) *userRepo {
 	return &userRepo{
-		db: db,
-		qb: sq.StatementBuilder.PlaceholderFormat(sq.Dollar),
+		db:     db,
+		qb:     sq.StatementBuilder.PlaceholderFormat(sq.Dollar),
 		getter: getter,
 	}
 }
@@ -28,7 +28,7 @@ func (r *userRepo) Save(ctx context.Context, user domain.User) (domain.User, err
 	query := r.qb.
 		Insert("users").
 		Columns("id", "username", "is_active", "team_id").
-		Values(user.Id, user.Username, user.IsActive, user.TeamId).
+		Values(user.ID, user.Username, user.IsActive, user.TeamID).
 		Suffix("RETURNING id, username, team_id, is_active, assign_rate")
 
 	sql, args, err := query.ToSql()
@@ -37,6 +37,7 @@ func (r *userRepo) Save(ctx context.Context, user domain.User) (domain.User, err
 	}
 
 	var createdUser domain.User
+
 	err = r.getter.DefaultTrOrDB(ctx, r.db).GetContext(ctx, &createdUser, sql, args...)
 	if err != nil {
 		return domain.User{}, err
@@ -57,6 +58,7 @@ func (r *userRepo) GetByTeamID(ctx context.Context, teamId uuid.UUID) ([]domain.
 	}
 
 	var users []domain.User
+
 	err = r.getter.DefaultTrOrDB(ctx, r.db).SelectContext(ctx, &users, sql, args...)
 	if err != nil {
 		return nil, err
@@ -65,14 +67,14 @@ func (r *userRepo) GetByTeamID(ctx context.Context, teamId uuid.UUID) ([]domain.
 	return users, nil
 }
 
-func(r *userRepo) Update(ctx context.Context, user domain.User) (domain.User, error) {
+func (r *userRepo) Update(ctx context.Context, user domain.User) (domain.User, error) {
 	query := r.qb.
 		Update("users").
 		Set("username", user.Username).
 		Set("is_active", user.IsActive).
-		Set("team_id", user.TeamId).
+		Set("team_id", user.TeamID).
 		Set("assign_rate", user.AssignRate).
-		Where(sq.Eq{"id": user.Id}).
+		Where(sq.Eq{"id": user.ID}).
 		Suffix("RETURNING id, username, is_active, team_id, assign_rate")
 
 	sql, args, err := query.ToSql()
@@ -81,6 +83,7 @@ func(r *userRepo) Update(ctx context.Context, user domain.User) (domain.User, er
 	}
 
 	var updatedUser domain.User
+
 	err = r.getter.DefaultTrOrDB(ctx, r.db).GetContext(ctx, &updatedUser, sql, args...)
 	if err != nil {
 		return domain.User{}, err
@@ -101,6 +104,7 @@ func (r *userRepo) GetByID(ctx context.Context, userId string) (domain.User, err
 	}
 
 	var user domain.User
+
 	err = r.getter.DefaultTrOrDB(ctx, r.db).GetContext(ctx, &user, sql, args...)
 	if err != nil {
 		return domain.User{}, err

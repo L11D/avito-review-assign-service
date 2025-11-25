@@ -2,6 +2,7 @@ package app
 
 import (
 	"context"
+	"errors"
 	"log/slog"
 	"net/http"
 	"os"
@@ -26,71 +27,90 @@ func Run() {
 	config, err := config.LoadConfig()
 	if err != nil {
 		slog.Error("Failed to load config", slog.String("error", err.Error()))
+
 		return
 	}
 
-	ctx, stop := signal.NotifyContext(context.Background(), 
-        os.Interrupt, syscall.SIGTERM, syscall.SIGINT)
-    defer stop()
+	ctx, stop := signal.NotifyContext(context.Background(),
+		os.Interrupt, syscall.SIGTERM, syscall.SIGINT)
+	defer stop()
 
 	db, err := sqlx.Connect("postgres", config.GetDBSource())
 	if err != nil {
 		slog.Error("Failed to connect to the database", slog.String("error", err.Error()))
+
 		return
 	}
-	defer db.Close()
+
+	defer func() {
+		if err := db.Close(); err != nil {
+			slog.Error("Failed to close database connection", slog.String("error", err.Error()))
+		}
+	}()
 
 	if err := migrations.RunMigrations(db.DB); err != nil {
 		slog.Error("Failed to run migrations", slog.String("error", err.Error()))
+
 		return
 	}
 
-	trManager := manager.Must(trmsqlx.NewDefaultFactory(db))
-
-	userRepo := repo.NewUserRepo(db, trmsqlx.DefaultCtxGetter)
-	teamRepo := repo.NewTeamRepo(db, trmsqlx.DefaultCtxGetter)
-	pullRequestRepo := repo.NewPullRequestRepo(db, trmsqlx.DefaultCtxGetter)
-	pullRequestReviewerRepo := repo.NewPullRequestReviewerRepo(db, trmsqlx.DefaultCtxGetter)
-
-	userService := services.NewUserService(userRepo, teamRepo, pullRequestRepo, trManager)
-	teamService := services.NewTeamService(teamRepo, userService, trManager)
-	pullRequestService := services.NewPullRequestService(pullRequestRepo, pullRequestReviewerRepo, userRepo, userService, trManager)
-	
-	teamHandler := handlers.NewTeamHandler(teamService)
-	userHandler := handlers.NewUserHandler(userService)
-	pullRequestHandler := handlers.NewPullRequestHandler(pullRequestService)
-
-	r := gin.New()
-	r.Use(gin.Recovery())
-	r.Use(middleware.ErrorMiddleware())
-
-	userHandler.RegisterRoutes(r)
-	teamHandler.RegisterRoutes(r)
-	pullRequestHandler.RegisterRoutes(r)
+	r := initDependencies(db)
 
 	server := &http.Server{
-        Addr:    ":" + config.HTTPPort,
-        Handler: r,
+		Addr:    ":" + config.HTTPPort,
+		Handler: r,
+		ReadHeaderTimeout: config.ReadHeaderTimeout,
 	}
 
 	go func() {
-        slog.Info("Starting server on :" + config.HTTPPort)
-        if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-            slog.Error("Server failed to start", slog.String("error", err.Error()))
-            stop() 
-        }
-    }()
+		slog.Info("Starting server on :" + config.HTTPPort)
+
+		err := server.ListenAndServe()
+		if err != nil && !errors.Is(err, http.ErrServerClosed) {
+			slog.Error("Server failed to start", slog.String("error", err.Error()))
+			stop()
+		}
+	}()
 
 	<-ctx.Done()
 	slog.Info("Shutting down application...")
 	stop()
 
 	shutdownCtx, cancel := context.WithTimeout(context.Background(), config.ShutdownTimeout)
-    defer cancel()
+	defer cancel()
 
 	if err := server.Shutdown(shutdownCtx); err != nil {
-        slog.Error("Server shutdown failed", slog.String("error", err.Error()))
-    }
+		slog.Error("Server shutdown failed", slog.String("error", err.Error()))
+	}
 
 	slog.Info("Application stopped")
+}
+
+func initDependencies(db *sqlx.DB) *gin.Engine {
+    trManager := manager.Must(trmsqlx.NewDefaultFactory(db))
+
+    userRepo := repo.NewUserRepo(db, trmsqlx.DefaultCtxGetter)
+    teamRepo := repo.NewTeamRepo(db, trmsqlx.DefaultCtxGetter)
+    pullRequestRepo := repo.NewPullRequestRepo(db, trmsqlx.DefaultCtxGetter)
+    pullRequestReviewerRepo := repo.NewPullRequestReviewerRepo(db, trmsqlx.DefaultCtxGetter)
+
+    userService := services.NewUserService(userRepo, teamRepo, pullRequestRepo, trManager)
+    teamService := services.NewTeamService(teamRepo, userService, trManager)
+    pullService := services.NewPullRequestService(
+        pullRequestRepo,
+        pullRequestReviewerRepo,
+        userRepo,
+        userService,
+        trManager,
+    )
+
+	r := gin.New()
+    r.Use(gin.Recovery())
+    r.Use(middleware.ErrorMiddleware())
+
+    handlers.NewUserHandler(userService).RegisterRoutes(r)
+    handlers.NewTeamHandler(teamService).RegisterRoutes(r)
+    handlers.NewPullRequestHandler(pullService).RegisterRoutes(r)
+
+    return r
 }

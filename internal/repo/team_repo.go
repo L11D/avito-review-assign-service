@@ -11,15 +11,15 @@ import (
 )
 
 type teamRepo struct {
-	db *sqlx.DB
-	qb sq.StatementBuilderType
+	db     *sqlx.DB
+	qb     sq.StatementBuilderType
 	getter *trmsqlx.CtxGetter
 }
 
 func NewTeamRepo(db *sqlx.DB, getter *trmsqlx.CtxGetter) *teamRepo {
 	return &teamRepo{
-		db: db,
-		qb: sq.StatementBuilder.PlaceholderFormat(sq.Dollar),
+		db:     db,
+		qb:     sq.StatementBuilder.PlaceholderFormat(sq.Dollar),
 		getter: getter,
 	}
 }
@@ -37,6 +37,7 @@ func (r *teamRepo) Save(ctx context.Context, team domain.Team) (domain.Team, err
 	}
 
 	var createdTeam domain.Team
+
 	err = r.getter.DefaultTrOrDB(ctx, r.db).GetContext(ctx, &createdTeam, sql, args...)
 	if err != nil {
 		return domain.Team{}, err
@@ -57,6 +58,7 @@ func (r *teamRepo) GetByName(ctx context.Context, name string) (domain.Team, err
 	}
 
 	var team domain.Team
+
 	err = r.getter.DefaultTrOrDB(ctx, r.db).GetContext(ctx, &team, sql, args...)
 	if err != nil {
 		return domain.Team{}, err
@@ -77,6 +79,7 @@ func (r *teamRepo) GetByID(ctx context.Context, id uuid.UUID) (domain.Team, erro
 	}
 
 	var team domain.Team
+
 	err = r.getter.DefaultTrOrDB(ctx, r.db).GetContext(ctx, &team, sql, args...)
 	if err != nil {
 		return domain.Team{}, err

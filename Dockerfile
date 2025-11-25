@@ -5,8 +5,11 @@ WORKDIR /app
 COPY go.mod go.sum ./
 RUN go mod download
 
+COPY .golangci.yml ./
 COPY cmd/ ./cmd/
 COPY internal/ ./internal/
+
+RUN golangci-lint run
 
 RUN go build -o main ./cmd/app/main.go
 
