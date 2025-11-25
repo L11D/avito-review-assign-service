@@ -33,3 +33,7 @@ type PullRequestMergeDTO struct {
 	Id string `json:"pull_request_id" binding:"required,min=1,max=50"`
 }
 
+type PullRequestReassignDTO struct {
+	PullRequestId string `json:"pull_request_id" binding:"required,min=1,max=50"`
+	OldReviewerId string `json:"old_reviewer_id" binding:"required,min=1,max=50"`
+}

@@ -63,3 +63,21 @@ func (r *pullRequestReviewerRepo) GetPRUsersIds(ctx context.Context, prId string
 
 	return usersIds, nil
 }
+
+func (r *pullRequestReviewerRepo) DeleteByPRAndUserId(ctx context.Context, prId string, userId string) error {
+	query := r.qb.
+		Delete("pull_request_reviewers").
+		Where(sq.Eq{"pull_request_id": prId, "user_id": userId})
+
+	sql, args, err := query.ToSql()
+	if err != nil {
+		return err
+	}
+
+	_, err = r.getter.DefaultTrOrDB(ctx, r.db).ExecContext(ctx, sql, args...)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}

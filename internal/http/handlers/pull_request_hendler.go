@@ -11,6 +11,7 @@ import (
 type PullRequestService interface {
 	Create(ctx context.Context, pr dto.PullRequestCreateDTO) (dto.PullRequestDTO, error)
 	Merge(ctx context.Context, prId string) (dto.PullRequestDTO, error)
+	Reassign(ctx context.Context, reassignDTO dto.PullRequestReassignDTO) (dto.PullRequestDTO, error)
 }
 
 type PullRequestHandler struct{
@@ -27,6 +28,7 @@ func (h *PullRequestHandler) RegisterRoutes(e *gin.Engine) {
 	g := e.Group("/pullRequest")
 	g.POST("/create", h.Create)
 	g.POST("/merge", h.Merge)
+	g.POST("/reassign", h.Reassign)
 }
 
 func (h *PullRequestHandler) Create(c *gin.Context) {
@@ -59,4 +61,20 @@ func (h *PullRequestHandler) Merge(c *gin.Context) {
 	}
 
 	c.JSON(200, gin.H{"pr": mergedPR})
+}
+
+func (h *PullRequestHandler) Reassign(c *gin.Context) {
+	var dto dto.PullRequestReassignDTO
+	if err := c.ShouldBindJSON(&dto); err != nil {
+		c.Error(errors.NewValidationFailedError(err.Error()))
+		return
+	}
+
+	reassignedPR,  err := h.service.Reassign(c.Request.Context(), dto)
+	if err != nil {
+		c.Error(err)
+		return
+	}
+
+	c.JSON(200, gin.H{"pr": reassignedPR})
 }

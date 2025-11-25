@@ -23,6 +23,7 @@ type PullRequestRepo interface {
 type PullRequestReviewerRepo interface {
 	Save(ctx context.Context, prReviewer domain.PullRequestReviewer) (domain.PullRequestReviewer, error)
 	GetPRUsersIds(ctx context.Context, prId string) ([]string, error)
+	DeleteByPRAndUserId(ctx context.Context, prId string, userId string) error
 }
 
 type UserRepoPRService interface {
@@ -63,19 +64,6 @@ func (s *pullRequestService) Create(ctx context.Context, pr dto.PullRequestCreat
 	var createReviewerIds []string
 
 	err := s.trManager.Do(ctx, func(ctx context.Context) error {
-		userCreator, err := s.userRepo.GetByID(ctx, pr.AuthorId)
-		if err != nil {
-			if errors.Is(appErrors.MapPgError(err), appErrors.ErrNotFound) {
-				return appErrors.NewNotFoundError("User with ID '" + pr.AuthorId + "'")
-			}
-			return err
-		}
-
-		usersInTeam, err := s.userRepo.GetByTeamID(ctx, userCreator.TeamId)
-		if err != nil {
-			return err
-		}
-
 		PR, err := s.PRRepo.Save(ctx, domainPR)
 		if err != nil {
 			if errors.Is(appErrors.MapPgError(err), appErrors.ErrAlreadyExists) {
@@ -84,7 +72,11 @@ func (s *pullRequestService) Create(ctx context.Context, pr dto.PullRequestCreat
 			return err
 		}
 
-		reviewersIds := chooseReviewers(usersInTeam, pr.AuthorId)
+		reviewersIds, err := s.getReviewsForUserPR(ctx, pr.AuthorId, []string{})
+		if err != nil {
+			return err
+		}
+
 		for _, reviewerId := range reviewersIds {
 			prReviewer := domain.PullRequestReviewer{
 				PullRequestId: pr.Id,
@@ -107,6 +99,25 @@ func (s *pullRequestService) Create(ctx context.Context, pr dto.PullRequestCreat
 	}
 
 	return prToDTO(createdPR, createReviewerIds), nil
+}
+
+func (s *pullRequestService) getReviewsForUserPR(ctx context.Context, userId string, excludeIds []string) ([]string, error) {
+	user, err := s.userRepo.GetByID(ctx, userId)
+	if err != nil {
+		if errors.Is(appErrors.MapPgError(err), appErrors.ErrNotFound) {
+			return nil, appErrors.NewNotFoundError("User with ID '" + userId + "'")
+		}
+		return nil, err
+	}
+
+	usersInTeam, err := s.userRepo.GetByTeamID(ctx, user.TeamId)
+	if err != nil {
+		return nil, err
+	}
+
+	excludeIds = append(excludeIds, userId)
+	reviewersIds := chooseReviewers(usersInTeam, excludeIds)
+	return reviewersIds, nil
 }
 
 func (s *pullRequestService) Merge(ctx context.Context, prId string) (dto.PullRequestDTO, error) {
@@ -161,12 +172,99 @@ func (s *pullRequestService) Merge(ctx context.Context, prId string) (dto.PullRe
 	return prToDTO(updatedPR, reviewerIds), nil
 }
 
-func chooseReviewers(users []domain.User, creatorId string) []string {
+func (s *pullRequestService) Reassign(ctx context.Context, reassignDTO dto.PullRequestReassignDTO) (dto.PullRequestDTO, error) {
+	pr, err := s.PRRepo.GetByID(ctx, reassignDTO.PullRequestId)
+	if err != nil {
+		if errors.Is(appErrors.MapPgError(err), appErrors.ErrNotFound) {
+			return dto.PullRequestDTO{}, appErrors.NewNotFoundError("Pull Request with ID '" + reassignDTO.PullRequestId + "'")
+		}
+		return dto.PullRequestDTO{}, err
+	}
+
+	if pr.Status == domain.StatusMerged {
+		return dto.PullRequestDTO{}, appErrors.NewPullRequestMergedError()
+	}
+
+	hasReviewer, err := s.prHasReviewer(ctx, pr.Id, reassignDTO.OldReviewerId)
+	if err != nil {
+		return dto.PullRequestDTO{}, err
+	}
+	if !hasReviewer {
+		return dto.PullRequestDTO{}, appErrors.NewNotAssignedError()
+	}
+
+	newReviewersIds, err := s.getReviewsForUserPR(ctx, pr.AuthorId, []string{reassignDTO.OldReviewerId})
+	if err != nil {
+		return dto.PullRequestDTO{}, err
+	}
+
+	if len(newReviewersIds) < 1 { 
+		return dto.PullRequestDTO{}, appErrors.NewNoCandidateError()
+	}
+
+	err = s.trManager.Do(ctx, func(ctx context.Context) error {
+		err := s.PRReviewerRepo.DeleteByPRAndUserId(ctx, pr.Id, reassignDTO.OldReviewerId)
+		if err != nil {
+			return err
+		}
+
+		newReviewerId := newReviewersIds[0]
+
+		prReviewer := domain.PullRequestReviewer{
+			PullRequestId: pr.Id,
+			UserId:        newReviewerId,
+		}
+		_, err = s.PRReviewerRepo.Save(ctx, prReviewer)
+		if err != nil {
+			return err
+		}
+
+		return nil
+	})
+
+	if err != nil {
+		return dto.PullRequestDTO{}, err
+	}
+
+	reviewerIds, err := s.PRReviewerRepo.GetPRUsersIds(ctx, pr.Id)
+	if err != nil {
+		return dto.PullRequestDTO{}, err
+	}
+
+	return prToDTO(pr, reviewerIds), nil
+}
+
+func (s *pullRequestService) prHasReviewer(ctx context.Context, prId string, reviewerId string) (bool, error) {
+	usersIds, err := s.PRReviewerRepo.GetPRUsersIds(ctx, prId)
+	if err != nil {
+		return false, err
+	}
+
+	for _, id := range usersIds {
+		if id == reviewerId {
+			return true, nil
+		}
+	}
+
+	return false, nil
+}
+
+func chooseReviewers(users []domain.User, excludeIds []string) []string {
 	var probableReviewers []domain.User
 	for _, user := range users {
-		if user.Id != creatorId && user.IsActive {
-			probableReviewers = append(probableReviewers, user)
+		if user.IsActive {
+			excluded := false
+			for _, excludeId := range excludeIds {
+				if user.Id == excludeId {
+					excluded = true
+					break
+				}
+			}
+			if !excluded {
+				probableReviewers = append(probableReviewers, user)
+			}
 		}
+
 	}
 
 	sort.Slice(probableReviewers, func(i, j int) bool {

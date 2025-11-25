@@ -79,3 +79,27 @@ func NewPullRequestExistsError(prId string) *AppError {
 		StatusCode: 409,
 	}
 }
+
+func NewPullRequestMergedError() *AppError {
+	return &AppError{
+		Code:       PR_MERGED,
+		Message:    "Cannot reassign on merged PR",
+		StatusCode: 409,
+	}
+}
+
+func NewNotAssignedError() *AppError {
+	return &AppError{
+		Code:       NOT_ASSIGNED,
+		Message:    "Reviewer is not assigned to this PR",
+		StatusCode: 409,
+	}
+}
+
+func NewNoCandidateError() *AppError {
+	return &AppError{
+		Code:       NO_CANDIDATE,
+		Message:    "No active replacement candidate in team",
+		StatusCode: 409,
+	}
+}
