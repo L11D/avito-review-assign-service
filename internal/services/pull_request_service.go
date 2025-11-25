@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"sort"
+	"time"
 
 	"github.com/L11D/avito-review-assign-service/internal/domain"
 	appErrors "github.com/L11D/avito-review-assign-service/internal/errors"
@@ -14,10 +15,14 @@ import (
 
 type PullRequestRepo interface {
 	Save(ctx context.Context, pr domain.PullRequest) (domain.PullRequest, error)
+	Update(ctx context.Context, pr domain.PullRequest) (domain.PullRequest, error)
+	GetByID(ctx context.Context, prId string) (domain.PullRequest, error)
+	
 }
 
 type PullRequestReviewerRepo interface {
 	Save(ctx context.Context, prReviewer domain.PullRequestReviewer) (domain.PullRequestReviewer, error)
+	GetPRUsersIds(ctx context.Context, prId string) ([]string, error)
 }
 
 type UserRepoPRService interface {
@@ -25,23 +30,29 @@ type UserRepoPRService interface {
 	GetByTeamID(ctx context.Context, teamId uuid.UUID) ([]domain.User, error)
 }
 
-type pullRequestService struct {
-	PRRepo      PullRequestRepo
-	PRReviewerRepo PullRequestReviewerRepo
-	userRepo    UserRepoPRService
-	trManager *manager.Manager
+type UserServicePRService interface {
+	IncrementAssignRate(ctx context.Context, userId string) (domain.User, error)
 }
 
-func NewPullRequestService(prRepo PullRequestRepo, prReviewerRepo PullRequestReviewerRepo, userRepo UserRepoPRService, trManager *manager.Manager) *pullRequestService {
+type pullRequestService struct {
+	PRRepo         PullRequestRepo
+	PRReviewerRepo PullRequestReviewerRepo
+	userRepo       UserRepoPRService
+	userService    UserServicePRService
+	trManager      *manager.Manager
+}
+
+func NewPullRequestService(prRepo PullRequestRepo, prReviewerRepo PullRequestReviewerRepo, userRepo UserRepoPRService, userService UserServicePRService, trManager *manager.Manager) *pullRequestService {
 	return &pullRequestService{
-		PRRepo:      prRepo,
+		PRRepo:         prRepo,
 		PRReviewerRepo: prReviewerRepo,
-		userRepo:    userRepo,
-		trManager: trManager,
+		userRepo:       userRepo,
+		userService:    userService,
+		trManager:      trManager,
 	}
 }
 
-func (s *pullRequestService) Create(ctx context.Context, pr dto.PullRequestCreateDTO) (dto.PullRequestDTO, error){
+func (s *pullRequestService) Create(ctx context.Context, pr dto.PullRequestCreateDTO) (dto.PullRequestDTO, error) {
 	domainPR := domain.PullRequest{
 		Id:       pr.Id,
 		Name:     pr.Name,
@@ -95,17 +106,59 @@ func (s *pullRequestService) Create(ctx context.Context, pr dto.PullRequestCreat
 		return dto.PullRequestDTO{}, err
 	}
 
-	createdPRDTO := dto.PullRequestDTO{
-		Id:        createdPR.Id,
-		Name:      createdPR.Name,
-		AuthorId:  createdPR.AuthorId,
-		Status:    createdPR.Status,
-		CreatedAt: createdPR.CreatedAt,
-		MergedAt:  createdPR.MergedAt,
-		Reviewers: createReviewerIds,
+	return prToDTO(createdPR, createReviewerIds), nil
+}
+
+func (s *pullRequestService) Merge(ctx context.Context, prId string) (dto.PullRequestDTO, error) {
+	pr, err := s.PRRepo.GetByID(ctx, prId)
+	if err != nil {
+		if errors.Is(appErrors.MapPgError(err), appErrors.ErrNotFound) {
+			return dto.PullRequestDTO{}, appErrors.NewNotFoundError("Pull Request with ID '" + prId + "'")
+		}
+		return dto.PullRequestDTO{}, err
 	}
 
-	return createdPRDTO, nil
+	var reviewerIds []string
+	updatedPR := pr
+
+	if pr.Status != domain.StatusMerged {
+		pr.Status = domain.StatusMerged
+		now := time.Now().UTC()
+		pr.MergedAt = &now
+
+		err := s.trManager.Do(ctx, func(ctx context.Context) error {
+			pr, err = s.PRRepo.Update(ctx, pr)
+			if err != nil {
+				return err
+			}
+			updatedPR = pr
+
+			reviewers, err := s.PRReviewerRepo.GetPRUsersIds(ctx, pr.Id)
+			if err != nil {
+				return err
+			}
+
+			for _, reviewerId := range reviewers {
+				_, err = s.userService.IncrementAssignRate(ctx, reviewerId)
+				if err != nil {
+					return err
+				}
+			}
+			reviewerIds = reviewers
+
+			return nil
+		})
+		if err != nil {
+			return dto.PullRequestDTO{}, err
+		}
+	} else {
+		reviewerIds, err = s.PRReviewerRepo.GetPRUsersIds(ctx, pr.Id)
+		if err != nil {
+			return dto.PullRequestDTO{}, err
+		}
+	}
+
+	return prToDTO(updatedPR, reviewerIds), nil
 }
 
 func chooseReviewers(users []domain.User, creatorId string) []string {
@@ -130,4 +183,16 @@ func chooseReviewers(users []domain.User, creatorId string) []string {
 	}
 
 	return reviewers
+}
+
+func prToDTO(pr domain.PullRequest, reviewerIds []string) dto.PullRequestDTO {
+	return dto.PullRequestDTO{
+		Id:        pr.Id,
+		Name:      pr.Name,
+		AuthorId:  pr.AuthorId,
+		Status:    pr.Status,
+		CreatedAt: pr.CreatedAt,
+		MergedAt:  pr.MergedAt,
+		Reviewers: reviewerIds,
+	}
 }

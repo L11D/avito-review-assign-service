@@ -43,3 +43,23 @@ func (r *pullRequestReviewerRepo) Save(ctx context.Context, prReviewer domain.Pu
 
 	return createdPRReviewer, nil
 }
+
+func (r *pullRequestReviewerRepo) GetPRUsersIds(ctx context.Context, prId string) ([]string, error) {
+	query := r.qb.
+		Select("user_id").
+		From("pull_request_reviewers").
+		Where(sq.Eq{"pull_request_id": prId})
+
+	sql, args, err := query.ToSql()
+	if err != nil {
+		return nil, err
+	}
+
+	var usersIds []string
+	err = r.getter.DefaultTrOrDB(ctx, r.db).SelectContext(ctx, &usersIds, sql, args...)
+	if err != nil {
+		return nil, err
+	}
+
+	return usersIds, nil
+}

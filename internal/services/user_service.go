@@ -14,7 +14,7 @@ import (
 type UserRepo interface {
 	Save(ctx context.Context, user domain.User) (domain.User, error)
 	GetByTeamID(ctx context.Context, teamId uuid.UUID) ([]domain.User, error)
-	SetIsActive(ctx context.Context, userId string, isActive bool) (domain.User, error)
+	Update(ctx context.Context, user domain.User) (domain.User, error)
 	GetByID(ctx context.Context, userId string) (domain.User, error)
 }
 
@@ -78,21 +78,31 @@ func (s *userService) GetTeamMembers(ctx context.Context, teamId uuid.UUID) ([]d
 }
 
 func (s *userService) SetIsActive(ctx context.Context, userSetIsActiveDTO dto.UserSetIsActiveDTO) (dto.UserDTO, error) {
-	updatedUser, err := s.userRepo.SetIsActive(ctx, userSetIsActiveDTO.UserId, *userSetIsActiveDTO.IsActive)
+	user, err:= s.userRepo.GetByID(ctx, userSetIsActiveDTO.UserId)
 	if err != nil {
 		if errors.Is(appErrors.MapPgError(err), appErrors.ErrNotFound) {
-			return dto.UserDTO{}, appErrors.NewNotFoundError("User with ID '" + userSetIsActiveDTO.UserId)
+			return dto.UserDTO{}, appErrors.NewNotFoundError("User with ID '" + userSetIsActiveDTO.UserId + "'")
+		}
+		return dto.UserDTO{}, err
+	}
+
+	if user.IsActive != *userSetIsActiveDTO.IsActive {
+		user.IsActive = *userSetIsActiveDTO.IsActive
+		user, err = s.userRepo.Update(ctx, user)
+		if err != nil {
+			return dto.UserDTO{}, err
 		}
 	}
-	team, err := s.teamRepo.GetByID(ctx, updatedUser.TeamId)
+
+	team, err := s.teamRepo.GetByID(ctx, user.TeamId)
 	if err != nil {
 		return dto.UserDTO{}, err
 	}
 
 	return dto.UserDTO{
-		Id:       updatedUser.Id,
-		Username: updatedUser.Username,
-		IsActive: updatedUser.IsActive,
+		Id:       user.Id,
+		Username: user.Username,
+		IsActive: user.IsActive,
 		TeamName: team.Name,
 	}, err
 }
@@ -125,6 +135,26 @@ func (s *userService) GetReviews(ctx context.Context, userId string) (dto.UserPR
 		PullRequests: prDTOs,
 	}, nil
 }
+
+func (s *userService) IncrementAssignRate(ctx context.Context, userId string) (domain.User, error) {
+	user,  err := s.userRepo.GetByID(ctx, userId)
+	if err != nil {
+		if errors.Is(appErrors.MapPgError(err), appErrors.ErrNotFound) {
+			return domain.User{}, appErrors.NewNotFoundError("User with ID '" + userId + "'")
+		}
+		return domain.User{}, err
+	}
+	
+	user.AssignRate += 1
+
+	updatedUser, err := s.userRepo.Update(ctx, user)
+	if err != nil {
+		return domain.User{}, err
+	}
+
+	return updatedUser, nil
+}
+
 
 func memberDTOtoUser(dto dto.TeamMemberDTO, teamId uuid.UUID) domain.User {
 	return domain.User{

@@ -65,13 +65,16 @@ func (r *userRepo) GetByTeamID(ctx context.Context, teamId uuid.UUID) ([]domain.
 	return users, nil
 }
 
-func (r *userRepo) SetIsActive(ctx context.Context, userId string, isActive bool) (domain.User, error) {
+func(r *userRepo) Update(ctx context.Context, user domain.User) (domain.User, error) {
 	query := r.qb.
 		Update("users").
-		Set("is_active", isActive).
-		Where(sq.Eq{"id": userId}).
+		Set("username", user.Username).
+		Set("is_active", user.IsActive).
+		Set("team_id", user.TeamId).
+		Set("assign_rate", user.AssignRate).
+		Where(sq.Eq{"id": user.Id}).
 		Suffix("RETURNING id, username, is_active, team_id, assign_rate")
-	
+
 	sql, args, err := query.ToSql()
 	if err != nil {
 		return domain.User{}, err

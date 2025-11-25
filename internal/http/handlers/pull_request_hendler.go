@@ -10,6 +10,7 @@ import (
 
 type PullRequestService interface {
 	Create(ctx context.Context, pr dto.PullRequestCreateDTO) (dto.PullRequestDTO, error)
+	Merge(ctx context.Context, prId string) (dto.PullRequestDTO, error)
 }
 
 type PullRequestHandler struct{
@@ -25,6 +26,7 @@ func NewPullRequestHandler(service PullRequestService) *PullRequestHandler {
 func (h *PullRequestHandler) RegisterRoutes(e *gin.Engine) {
 	g := e.Group("/pullRequest")
 	g.POST("/create", h.Create)
+	g.POST("/merge", h.Merge)
 }
 
 func (h *PullRequestHandler) Create(c *gin.Context) {
@@ -41,4 +43,20 @@ func (h *PullRequestHandler) Create(c *gin.Context) {
 	}
 
 	c.JSON(201, gin.H{"pr": createdPR})
+}
+
+func (h *PullRequestHandler) Merge(c *gin.Context) {
+	var dto dto.PullRequestMergeDTO
+	if err := c.ShouldBindJSON(&dto); err != nil {
+		c.Error(errors.NewValidationFailedError(err.Error()))
+		return
+	}
+
+	mergedPR,  err := h.service.Merge(c.Request.Context(), dto.Id)
+	if err != nil {
+		c.Error(err)
+		return
+	}
+
+	c.JSON(200, gin.H{"pr": mergedPR})
 }

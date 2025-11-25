@@ -54,7 +54,8 @@ func Run() {
 
 	userService := services.NewUserService(userRepo, teamRepo, pullRequestRepo, trManager)
 	teamService := services.NewTeamService(teamRepo, userService, trManager)
-	pullRequestService := services.NewPullRequestService(pullRequestRepo, pullRequestReviewerRepo, userRepo,  trManager)
+	pullRequestService := services.NewPullRequestService(pullRequestRepo, pullRequestReviewerRepo, userRepo, userService, trManager)
+	
 	teamHandler := handlers.NewTeamHandler(teamService)
 	userHandler := handlers.NewUserHandler(userService)
 	pullRequestHandler := handlers.NewPullRequestHandler(pullRequestService)
