@@ -11,3 +11,8 @@ type UserDTO struct {
 	TeamName string `json:"team_name"`
 	IsActive bool   `json:"is_active"`
 }
+
+type UserPRsDTO struct {
+	UserId       string                `json:"user_id"`
+	PullRequests []PullRequestShortDTO `json:"pull_requests"`
+}

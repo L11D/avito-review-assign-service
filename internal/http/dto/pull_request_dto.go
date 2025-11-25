@@ -9,11 +9,18 @@ type PullRequestCreateDTO struct {
 }
 
 type PullRequestDTO struct {
+	Id        string     `json:"pull_request_id"`
+	Name      string     `json:"pull_request_name"`
+	AuthorId  string     `json:"author_id"`
+	Status    string     `json:"status"`
+	CreatedAt time.Time  `json:"created_at"`
+	MergedAt  *time.Time `json:"merged_at,omitempty"`
+	Reviewers []string   `json:"assigned_reviewers"`
+}
+
+type PullRequestShortDTO struct {
 	Id       string `json:"pull_request_id"`
 	Name     string `json:"pull_request_name"`
 	AuthorId string `json:"author_id"`
 	Status   string `json:"status"`
-	CreatedAt time.Time `json:"created_at"`
-	MergedAt  *time.Time `json:"merged_at,omitempty"`
-	Reviewers []string `json:"assigned_reviewers"`
 }

@@ -85,3 +85,4 @@ func (s *teamService) GetByName(ctx context.Context, name string) (dto.TeamDTO, 
 		Members: members,
 	}, nil
 }
+

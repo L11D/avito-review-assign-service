@@ -52,7 +52,7 @@ func Run() {
 	pullRequestRepo := repo.NewPullRequestRepo(db, trmsqlx.DefaultCtxGetter)
 	pullRequestReviewerRepo := repo.NewPullRequestReviewerRepo(db, trmsqlx.DefaultCtxGetter)
 
-	userService := services.NewUserService(userRepo, teamRepo, trManager)
+	userService := services.NewUserService(userRepo, teamRepo, pullRequestRepo, trManager)
 	teamService := services.NewTeamService(teamRepo, userService, trManager)
 	pullRequestService := services.NewPullRequestService(pullRequestRepo, pullRequestReviewerRepo, userRepo,  trManager)
 	teamHandler := handlers.NewTeamHandler(teamService)

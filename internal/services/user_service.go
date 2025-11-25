@@ -15,6 +15,11 @@ type UserRepo interface {
 	Save(ctx context.Context, user domain.User) (domain.User, error)
 	GetByTeamID(ctx context.Context, teamId uuid.UUID) ([]domain.User, error)
 	SetIsActive(ctx context.Context, userId string, isActive bool) (domain.User, error)
+	GetByID(ctx context.Context, userId string) (domain.User, error)
+}
+
+type PullRequestRepoUserService interface {
+	GetByUserId(ctx context.Context, userId string) ([]domain.PullRequest, error)
 }
 
 type TeamRepoUserService interface {
@@ -22,13 +27,19 @@ type TeamRepoUserService interface {
 }
 
 type userService struct {
-	userRepo UserRepo
-	teamRepo TeamRepoUserService
-	trManager   *manager.Manager
+	userRepo  UserRepo
+	teamRepo  TeamRepoUserService
+	prRepo    PullRequestRepoUserService
+	trManager *manager.Manager
 }
 
-func NewUserService(userRepo UserRepo, teamRepo TeamRepoUserService, trManager *manager.Manager) *userService {
-	return &userService{userRepo: userRepo, teamRepo: teamRepo, trManager: trManager}
+func NewUserService(userRepo UserRepo, teamRepo TeamRepoUserService, prRepo PullRequestRepoUserService, trManager *manager.Manager) *userService {
+	return &userService{
+		userRepo:  userRepo,
+		teamRepo:  teamRepo,
+		prRepo:    prRepo,
+		trManager: trManager,
+	}
 }
 
 func (s *userService) CreateUsersInTeam(ctx context.Context, teamId uuid.UUID, members []dto.TeamMemberDTO) ([]dto.TeamMemberDTO, error) {
@@ -48,7 +59,6 @@ func (s *userService) CreateUsersInTeam(ctx context.Context, teamId uuid.UUID, m
 		}
 		return nil
 	})
-	
 
 	return createdMembers, err
 }
@@ -87,18 +97,47 @@ func (s *userService) SetIsActive(ctx context.Context, userSetIsActiveDTO dto.Us
 	}, err
 }
 
+func (s *userService) GetReviews(ctx context.Context, userId string) (dto.UserPRsDTO, error) {
+	user, err := s.userRepo.GetByID(ctx, userId)
+	if err != nil {
+		if errors.Is(appErrors.MapPgError(err), appErrors.ErrNotFound) {
+			return dto.UserPRsDTO{}, appErrors.NewNotFoundError("User with ID '" + userId + "'")
+		}
+		return dto.UserPRsDTO{}, err
+	}
+	prs, err := s.prRepo.GetByUserId(ctx, userId)
+	if err != nil {
+		return dto.UserPRsDTO{}, err
+	}
+
+	prDTOs := make([]dto.PullRequestShortDTO, len(prs))
+	for i, pr := range prs {
+		prDTOs[i] = dto.PullRequestShortDTO{
+			Id:       pr.Id,
+			Name:     pr.Name,
+			Status:   pr.Status,
+			AuthorId: pr.AuthorId,
+		}
+	}
+
+	return dto.UserPRsDTO{
+		UserId:       user.Id,
+		PullRequests: prDTOs,
+	}, nil
+}
+
 func memberDTOtoUser(dto dto.TeamMemberDTO, teamId uuid.UUID) domain.User {
 	return domain.User{
-		Id: dto.Id,
+		Id:       dto.Id,
 		Username: dto.Username,
 		IsActive: dto.IsActive,
-		TeamId: teamId,
+		TeamId:   teamId,
 	}
 }
 
 func userToMemberDTO(user domain.User) dto.TeamMemberDTO {
 	return dto.TeamMemberDTO{
-		Id: user.Id,
+		Id:       user.Id,
 		Username: user.Username,
 		IsActive: user.IsActive,
 	}
