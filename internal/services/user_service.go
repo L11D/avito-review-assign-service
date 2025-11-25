@@ -6,7 +6,7 @@ import (
 
 	"github.com/L11D/avito-review-assign-service/internal/domain"
 	appErrors "github.com/L11D/avito-review-assign-service/internal/errors"
-	"github.com/L11D/avito-review-assign-service/internal/http/dto"
+	"github.com/L11D/avito-review-assign-service/pkg/api/dto"
 	"github.com/avito-tech/go-transaction-manager/trm/v2/manager"
 	"github.com/google/uuid"
 )
@@ -34,9 +34,9 @@ type userService struct {
 }
 
 func NewUserService(
-	userRepo UserRepo, 
-	teamRepo TeamRepoUserService, 
-	prRepo PullRequestRepoUserService, 
+	userRepo UserRepo,
+	teamRepo TeamRepoUserService,
+	prRepo PullRequestRepoUserService,
 	trManager *manager.Manager,
 ) *userService {
 	return &userService{
@@ -48,8 +48,8 @@ func NewUserService(
 }
 
 func (s *userService) CreateUsersInTeam(
-	ctx context.Context, 
-	teamId uuid.UUID, 
+	ctx context.Context,
+	teamId uuid.UUID,
 	members []dto.TeamMemberDTO,
 ) ([]dto.TeamMemberDTO, error) {
 	createdMembers := make([]dto.TeamMemberDTO, len(members))
@@ -176,7 +176,7 @@ func memberDTOtoUser(dto dto.TeamMemberDTO, teamId uuid.UUID) domain.User {
 	return domain.User{
 		ID:       dto.ID,
 		Username: dto.Username,
-		IsActive: dto.IsActive,
+		IsActive: *dto.IsActive,
 		TeamID:   teamId,
 	}
 }
@@ -185,6 +185,6 @@ func userToMemberDTO(user domain.User) dto.TeamMemberDTO {
 	return dto.TeamMemberDTO{
 		ID:       user.ID,
 		Username: user.Username,
-		IsActive: user.IsActive,
+		IsActive: &user.IsActive,
 	}
 }

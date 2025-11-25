@@ -9,7 +9,7 @@ import (
 
 	"github.com/L11D/avito-review-assign-service/internal/domain"
 	appErrors "github.com/L11D/avito-review-assign-service/internal/errors"
-	"github.com/L11D/avito-review-assign-service/internal/http/dto"
+	"github.com/L11D/avito-review-assign-service/pkg/api/dto"
 	"github.com/avito-tech/go-transaction-manager/trm/v2/manager"
 	"github.com/google/uuid"
 )
@@ -73,7 +73,16 @@ func (s *pullRequestService) Create(ctx context.Context, pr dto.PullRequestCreat
 		createReviewerIds []string
 	)
 
-	err := s.trManager.Do(ctx, func(ctx context.Context) error {
+	_, err := s.userRepo.GetByID(ctx, pr.AuthorID)
+	if err != nil {
+		if errors.Is(appErrors.MapPgError(err), appErrors.ErrNotFound) {
+			return dto.PullRequestDTO{}, appErrors.NewNotFoundError("User with ID '" + pr.AuthorID + "'")
+		}
+
+		return dto.PullRequestDTO{}, err
+	}
+
+	err = s.trManager.Do(ctx, func(ctx context.Context) error {
 		PR, err := s.PRRepo.Save(ctx, domainPR)
 		if err != nil {
 			if errors.Is(appErrors.MapPgError(err), appErrors.ErrAlreadyExists) {
@@ -127,7 +136,7 @@ func (s *pullRequestService) Merge(ctx context.Context, prId string) (dto.PullRe
 
 	returnedPr := pr
 
-	if pr.Status != domain.StatusMerged {
+	if pr.Status != dto.StatusMerged {
 		returnedPr, returnedReviewerIds, err = s.doMerge(ctx, pr)
 		if err != nil {
 			return dto.PullRequestDTO{}, err
@@ -143,7 +152,7 @@ func (s *pullRequestService) Merge(ctx context.Context, prId string) (dto.PullRe
 }
 
 func (s *pullRequestService) Reassign(
-	ctx context.Context, 
+	ctx context.Context,
 	reassignDTO dto.PullRequestReassignDTO,
 ) (dto.PullRequestDTO, error) {
 	pr, err := s.PRRepo.GetByID(ctx, reassignDTO.PullRequestID)
@@ -155,7 +164,7 @@ func (s *pullRequestService) Reassign(
 		return dto.PullRequestDTO{}, err
 	}
 
-	if pr.Status == domain.StatusMerged {
+	if pr.Status == dto.StatusMerged {
 		return dto.PullRequestDTO{}, appErrors.NewPullRequestMergedError()
 	}
 
@@ -168,7 +177,12 @@ func (s *pullRequestService) Reassign(
 		return dto.PullRequestDTO{}, appErrors.NewNotAssignedError()
 	}
 
-	newReviewersIds, err := s.getReviewsForUserPR(ctx, pr.AuthorID, []string{reassignDTO.OldReviewerID})
+	returnedReviewerIds, err := s.PRReviewerRepo.GetPRUsersIds(ctx, pr.ID)
+	if err != nil {
+		return dto.PullRequestDTO{}, err
+	}
+
+	newReviewersIds, err := s.getReviewsForUserPR(ctx, pr.AuthorID, returnedReviewerIds)
 	if err != nil {
 		return dto.PullRequestDTO{}, err
 	}
@@ -222,7 +236,7 @@ func (s *pullRequestService) doMerge(
 	ctx context.Context,
 	notMergedPr domain.PullRequest,
 ) (domain.PullRequest, []string, error) {
-	notMergedPr.Status = domain.StatusMerged
+	notMergedPr.Status = dto.StatusMerged
 	now := time.Now().UTC()
 	notMergedPr.MergedAt = &now
 

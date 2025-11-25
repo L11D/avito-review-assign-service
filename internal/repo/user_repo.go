@@ -112,3 +112,23 @@ func (r *userRepo) GetByID(ctx context.Context, userId string) (domain.User, err
 
 	return user, nil
 }
+
+func (r *userRepo) GetAll(ctx context.Context) ([]domain.User, error) {
+	query := r.qb.
+		Select("id", "username", "is_active", "team_id", "assign_rate").
+		From("users")
+
+	sql, args, err := query.ToSql()
+	if err != nil {
+		return nil, err
+	}
+
+	var users []domain.User
+
+	err = r.getter.DefaultTrOrDB(ctx, r.db).SelectContext(ctx, &users, sql, args...)
+	if err != nil {
+		return nil, err
+	}
+
+	return users, nil
+}

@@ -57,8 +57,8 @@ func Run() {
 	r := initDependencies(db)
 
 	server := &http.Server{
-		Addr:    ":" + config.HTTPPort,
-		Handler: r,
+		Addr:              ":" + config.HTTPPort,
+		Handler:           r,
 		ReadHeaderTimeout: config.ReadHeaderTimeout,
 	}
 
@@ -87,30 +87,33 @@ func Run() {
 }
 
 func initDependencies(db *sqlx.DB) *gin.Engine {
-    trManager := manager.Must(trmsqlx.NewDefaultFactory(db))
+	trManager := manager.Must(trmsqlx.NewDefaultFactory(db))
 
-    userRepo := repo.NewUserRepo(db, trmsqlx.DefaultCtxGetter)
-    teamRepo := repo.NewTeamRepo(db, trmsqlx.DefaultCtxGetter)
-    pullRequestRepo := repo.NewPullRequestRepo(db, trmsqlx.DefaultCtxGetter)
-    pullRequestReviewerRepo := repo.NewPullRequestReviewerRepo(db, trmsqlx.DefaultCtxGetter)
+	userRepo := repo.NewUserRepo(db, trmsqlx.DefaultCtxGetter)
+	teamRepo := repo.NewTeamRepo(db, trmsqlx.DefaultCtxGetter)
+	pullRequestRepo := repo.NewPullRequestRepo(db, trmsqlx.DefaultCtxGetter)
+	pullRequestReviewerRepo := repo.NewPullRequestReviewerRepo(db, trmsqlx.DefaultCtxGetter)
 
-    userService := services.NewUserService(userRepo, teamRepo, pullRequestRepo, trManager)
-    teamService := services.NewTeamService(teamRepo, userService, trManager)
-    pullService := services.NewPullRequestService(
-        pullRequestRepo,
-        pullRequestReviewerRepo,
-        userRepo,
-        userService,
-        trManager,
-    )
+	userService := services.NewUserService(userRepo, teamRepo, pullRequestRepo, trManager)
+	teamService := services.NewTeamService(teamRepo, userService, trManager)
+	pullService := services.NewPullRequestService(
+		pullRequestRepo,
+		pullRequestReviewerRepo,
+		userRepo,
+		userService,
+		trManager,
+	)
+	statisticService := services.NewStatisticService(userRepo, trManager)
 
 	r := gin.New()
-    r.Use(gin.Recovery())
-    r.Use(middleware.ErrorMiddleware())
+	r.Use(gin.Recovery())
+	r.Use(middleware.ErrorMiddleware())
+	r.GET("/health", func(ctx *gin.Context) { ctx.JSON(http.StatusOK, gin.H{"status": "healthy"}) })
 
-    handlers.NewUserHandler(userService).RegisterRoutes(r)
-    handlers.NewTeamHandler(teamService).RegisterRoutes(r)
-    handlers.NewPullRequestHandler(pullService).RegisterRoutes(r)
+	handlers.NewUserHandler(userService).RegisterRoutes(r)
+	handlers.NewTeamHandler(teamService).RegisterRoutes(r)
+	handlers.NewPullRequestHandler(pullService).RegisterRoutes(r)
+	handlers.NewStatisticHandler(statisticService).RegisterRoutes(r)
 
-    return r
+	return r
 }

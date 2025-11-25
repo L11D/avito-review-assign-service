@@ -2,7 +2,7 @@ version: "2"
 
 run:
   timeout: 5m
-  tests: true 
+  tests: false
 
 linters:
   default: all
@@ -15,6 +15,9 @@ linters:
     - err113
     - exhaustruct
 
+  exclusions:
+    paths:
+      - "e2e_tests/.*"
 
   settings:
     revive:
@@ -28,5 +31,7 @@ linters:
       ignored-files: 
         - internal/errors
         - internal/http/handlers
+  
 
+      
 

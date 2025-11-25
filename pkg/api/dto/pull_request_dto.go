@@ -2,8 +2,6 @@ package dto
 
 import (
 	"time"
-
-	"github.com/L11D/avito-review-assign-service/internal/domain"
 )
 
 type PullRequestCreateDTO struct {
@@ -13,20 +11,24 @@ type PullRequestCreateDTO struct {
 }
 
 type PullRequestDTO struct {
-	ID        string          `json:"pull_request_id"`
-	Name      string          `json:"pull_request_name"`
-	AuthorID  string          `json:"author_id"`
-	Status    domain.PRStatus `json:"status"`
-	CreatedAt time.Time       `json:"created_at"`
-	MergedAt  *time.Time      `json:"merged_at,omitempty"`
-	Reviewers []string        `json:"assigned_reviewers"`
+	ID        string     `json:"pull_request_id"`
+	Name      string     `json:"pull_request_name"`
+	AuthorID  string     `json:"author_id"`
+	Status    PRStatus   `json:"status"`
+	CreatedAt time.Time  `json:"created_at"`
+	MergedAt  *time.Time `json:"merged_at,omitempty"`
+	Reviewers []string   `json:"assigned_reviewers"`
+}
+
+type FullPullRequestDTO struct {
+	PullRequest PullRequestDTO `json:"pr"`
 }
 
 type PullRequestShortDTO struct {
-	ID       string          `json:"pull_request_id"`
-	Name     string          `json:"pull_request_name"`
-	AuthorID string          `json:"author_id"`
-	Status   domain.PRStatus `json:"status"`
+	ID       string   `json:"pull_request_id"`
+	Name     string   `json:"pull_request_name"`
+	AuthorID string   `json:"author_id"`
+	Status   PRStatus `json:"status"`
 }
 
 type PullRequestMergeDTO struct {

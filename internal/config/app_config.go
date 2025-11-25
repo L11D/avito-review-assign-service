@@ -8,18 +8,18 @@ import (
 )
 
 const (
-	DEFAULT_SHUTDOWN_TIMEOUT = 10 * time.Second
+	DEFAULT_SHUTDOWN_TIMEOUT    = 10 * time.Second
 	DEFAULT_READ_HEADER_TIMEOUT = 10 * time.Second
 )
 
 type Config struct {
-	DBUser          string
-	DBPassword      string
-	DBHost          string
-	DBPort          string
-	DBName          string
-	HTTPPort        string
-	ShutdownTimeout time.Duration
+	DBUser            string
+	DBPassword        string
+	DBHost            string
+	DBPort            string
+	DBName            string
+	HTTPPort          string
+	ShutdownTimeout   time.Duration
 	ReadHeaderTimeout time.Duration
 }
 
@@ -84,13 +84,13 @@ func LoadConfig() (*Config, error) {
 	shutdownTimeout := getEnvDuration("SHUTDOWN_TIMEOUT", DEFAULT_SHUTDOWN_TIMEOUT)
 
 	return &Config{
-		DBUser:          dbUser,
-		DBPassword:      dbPass,
-		DBHost:          dbHost,
-		DBPort:          dbPort,
-		DBName:          dbName,
-		HTTPPort:        httpPort,
-		ShutdownTimeout: shutdownTimeout,
+		DBUser:            dbUser,
+		DBPassword:        dbPass,
+		DBHost:            dbHost,
+		DBPort:            dbPort,
+		DBName:            dbName,
+		HTTPPort:          httpPort,
+		ShutdownTimeout:   shutdownTimeout,
 		ReadHeaderTimeout: DEFAULT_READ_HEADER_TIMEOUT,
 	}, nil
 }

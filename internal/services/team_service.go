@@ -6,7 +6,7 @@ import (
 
 	"github.com/L11D/avito-review-assign-service/internal/domain"
 	appErrors "github.com/L11D/avito-review-assign-service/internal/errors"
-	"github.com/L11D/avito-review-assign-service/internal/http/dto"
+	"github.com/L11D/avito-review-assign-service/pkg/api/dto"
 	"github.com/avito-tech/go-transaction-manager/trm/v2/manager"
 	"github.com/google/uuid"
 )

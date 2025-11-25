@@ -24,7 +24,7 @@ func NewPullRequestReviewerRepo(db *sqlx.DB, getter *trmsqlx.CtxGetter) *pullReq
 }
 
 func (r *pullRequestReviewerRepo) Save(
-	ctx context.Context, 
+	ctx context.Context,
 	prReviewer domain.PullRequestReviewer,
 ) (domain.PullRequestReviewer, error) {
 	query := r.qb.

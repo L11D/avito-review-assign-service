@@ -8,5 +8,5 @@ type TeamDTO struct {
 type TeamMemberDTO struct {
 	ID       string `binding:"required,min=1,max=50" json:"user_id"`
 	Username string `binding:"required"              json:"username"`
-	IsActive bool   `binding:"required"              json:"is_active"`
+	IsActive *bool  `binding:"required"              json:"is_active"`
 }

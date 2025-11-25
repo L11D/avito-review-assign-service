@@ -4,7 +4,7 @@ import (
 	"context"
 
 	"github.com/L11D/avito-review-assign-service/internal/errors"
-	"github.com/L11D/avito-review-assign-service/internal/http/dto"
+	"github.com/L11D/avito-review-assign-service/pkg/api/dto"
 	"github.com/gin-gonic/gin"
 )
 
