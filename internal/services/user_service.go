@@ -4,9 +4,10 @@ import (
 	"context"
 	"errors"
 
-	appErrors "github.com/L11D/avito-review-assign-service/internal/errors"
 	"github.com/L11D/avito-review-assign-service/internal/domain"
+	appErrors "github.com/L11D/avito-review-assign-service/internal/errors"
 	"github.com/L11D/avito-review-assign-service/internal/http/dto"
+	"github.com/avito-tech/go-transaction-manager/trm/v2/manager"
 	"github.com/google/uuid"
 )
 
@@ -23,28 +24,33 @@ type TeamRepoUserService interface {
 type userService struct {
 	userRepo UserRepo
 	teamRepo TeamRepoUserService
+	trManager   *manager.Manager
 }
 
-func NewUserService(userRepo UserRepo, teamRepo TeamRepoUserService) *userService {
-	return &userService{userRepo: userRepo, teamRepo: teamRepo}
+func NewUserService(userRepo UserRepo, teamRepo TeamRepoUserService, trManager *manager.Manager) *userService {
+	return &userService{userRepo: userRepo, teamRepo: teamRepo, trManager: trManager}
 }
 
 func (s *userService) CreateUsersInTeam(ctx context.Context, teamId uuid.UUID, members []dto.TeamMemberDTO) ([]dto.TeamMemberDTO, error) {
 	createdMembers := make([]dto.TeamMemberDTO, len(members))
 	
-	for i, member := range members {
-		user := memberDTOtoUser(member, teamId)
-		createdUser, err := s.userRepo.Save(ctx, user)
-		if err != nil {
-			if errors.Is(appErrors.MapPgError(err), appErrors.ErrAlreadyExists) {
-				return nil, appErrors.NewUserExistsError(member.Id)
+	err := s.trManager.Do(ctx, func(ctx context.Context) error {
+		for i, member := range members {
+			user := memberDTOtoUser(member, teamId)
+			createdUser, err := s.userRepo.Save(ctx, user)
+			if err != nil {
+				if errors.Is(appErrors.MapPgError(err), appErrors.ErrAlreadyExists) {
+					return appErrors.NewUserExistsError(member.Id)
+				}
+				return err
 			}
-			return nil, err
+			createdMembers[i] = userToMemberDTO(createdUser)
 		}
-		createdMembers[i] = userToMemberDTO(createdUser)
-	}
+		return nil
+	})
+	
 
-	return createdMembers, nil
+	return createdMembers, err
 }
 
 func (s *userService) GetTeamMembers(ctx context.Context, teamId uuid.UUID) ([]dto.TeamMemberDTO, error) {
@@ -65,7 +71,7 @@ func (s *userService) SetIsActive(ctx context.Context, userSetIsActiveDTO dto.Us
 	updatedUser, err := s.userRepo.SetIsActive(ctx, userSetIsActiveDTO.UserId, *userSetIsActiveDTO.IsActive)
 	if err != nil {
 		if errors.Is(appErrors.MapPgError(err), appErrors.ErrNotFound) {
-			return dto.UserDTO{}, appErrors.NewNotFoundError("User with ID '" + userSetIsActiveDTO.UserId + "' not found")
+			return dto.UserDTO{}, appErrors.NewNotFoundError("User with ID '" + userSetIsActiveDTO.UserId)
 		}
 	}
 	team, err := s.teamRepo.GetByID(ctx, updatedUser.TeamId)
